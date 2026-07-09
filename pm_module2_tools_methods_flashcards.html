@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PM Module 2 — Flashcards</title>
+<style>
+  :root{
+    --ink:#141b2e; --paper:#eef1f6; --card:#fbfcfe; --rule:#cdd5e2;
+    --accent:#3f5bd9; --accent-soft:#dbe2f7; --teal:#1f3a8a;
+    --muted:#5b647a; --good:#2f7d59; --good-soft:#dcece1;
+    --warn:#b45309; --warn-soft:#f3e4cd;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:radial-gradient(120% 80% at 50% -10%, #ffffff 0%, var(--paper) 55%);
+    color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    -webkit-font-smoothing:antialiased;min-height:100%;
+    display:flex;flex-direction:column;align-items:center;padding:26px 18px 52px;
+  }
+  .wrap{width:100%;max-width:720px}
+  header{display:flex;flex-direction:column;gap:3px;margin-bottom:14px}
+  .eyebrow{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    letter-spacing:.18em;text-transform:uppercase;font-size:11px;color:var(--accent)}
+  h1{margin:0;font-size:25px;font-weight:600;letter-spacing:-.01em;color:var(--teal)}
+  .sub{color:var(--muted);font-size:13.5px}
+
+  .modes{display:inline-flex;border:1px solid var(--rule);border-radius:10px;
+    overflow:hidden;margin:14px 0 12px;background:var(--card)}
+  .modes button{border:0;background:transparent;color:var(--muted);
+    padding:8px 16px;font:inherit;font-size:13px;cursor:pointer}
+  .modes button[aria-pressed="true"]{background:var(--teal);color:#fff}
+
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .search{flex:1 1 190px;min-width:150px;border:1px solid var(--rule);border-radius:10px;
+    padding:9px 12px;font:inherit;font-size:14px;background:var(--card);color:var(--ink)}
+  .search:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  button.ghost{font:inherit;font-size:13px;border:1px solid var(--rule);background:var(--card);
+    color:var(--teal);border-radius:10px;padding:9px 13px;cursor:pointer;
+    transition:transform .08s ease,background .15s ease}
+  button.ghost:hover{background:#fff}
+  button.ghost:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .stats{display:flex;align-items:center;gap:14px;margin-bottom:10px;
+    font-family:ui-monospace,monospace;font-size:12px;color:var(--muted)}
+  .stats b{font-weight:600}
+  .stats .g{color:var(--good)} .stats .w{color:var(--warn)}
+  .progress{flex:1;height:6px;border-radius:99px;background:var(--accent-soft);
+    overflow:hidden;min-width:80px}
+  .bar{height:100%;background:linear-gradient(90deg,var(--teal),var(--good));width:0;
+    transition:width .3s ease}
+
+  .stage{perspective:1600px}
+  .card{position:relative;width:100%;min-height:300px;cursor:pointer;
+    transform-style:preserve-3d;transition:transform .5s cubic-bezier(.4,.2,.2,1);border-radius:18px}
+  .card.flip{transform:rotateY(180deg)}
+  .card.instant{transition:none}
+  .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    border:1px solid var(--rule);border-radius:18px;background:var(--card);
+    box-shadow:0 1px 0 #fff inset,0 18px 40px -24px rgba(20,27,46,.5);
+    padding:36px 30px;display:flex;flex-direction:column;justify-content:center}
+  .face .tag{position:absolute;top:16px;left:18px;font-family:ui-monospace,monospace;
+    font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+  .front .tag{color:var(--accent)} .back .tag{color:var(--teal)}
+  .pill{position:absolute;top:14px;right:16px;font-family:ui-monospace,monospace;
+    font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--good);
+    background:var(--good-soft);border-radius:99px;padding:3px 9px;display:none}
+  .card.known .pill{display:inline-block}
+  .back{transform:rotateY(180deg);background:linear-gradient(180deg,#fff 0%,#f2f5fb 100%)}
+  .term{font-size:27px;line-height:1.2;font-weight:600;color:var(--teal);letter-spacing:-.01em}
+  .defn{font-size:18px;line-height:1.5;color:var(--ink)}
+  .hint{position:absolute;bottom:15px;left:0;right:0;text-align:center;
+    font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--muted)}
+
+  .rate{display:flex;gap:12px;margin-top:16px}
+  .rate button{flex:1;font:inherit;font-size:15px;border-radius:12px;padding:14px;
+    cursor:pointer;border:1px solid var(--rule);transition:transform .08s ease,filter .15s ease,opacity .15s}
+  .rate button:active{transform:translateY(1px)}
+  .rate .got{background:var(--good-soft);border-color:#bcd9c8;color:#1e5a3d}
+  .rate .rev{background:var(--warn-soft);border-color:#e6cfa6;color:#8a4b06}
+  .rate button:hover{filter:brightness(1.03)}
+  .rate.locked button{opacity:.4;cursor:not-allowed}
+  .rate .k{font-family:ui-monospace,monospace;font-size:11px;opacity:.7;margin-left:6px}
+
+  .nav{display:flex;align-items:center;gap:12px;margin-top:16px;justify-content:center}
+  .nav .ghost{min-width:104px}
+  .counter{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);min-width:64px;text-align:center}
+
+  .kbd{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);
+    text-align:center;margin-top:14px}
+  .empty{padding:40px;text-align:center;color:var(--muted);
+    border:1px dashed var(--rule);border-radius:18px;min-height:300px;
+    display:flex;align-items:center;justify-content:center}
+
+  .summary{min-height:300px;border:1px solid var(--rule);border-radius:18px;
+    background:linear-gradient(180deg,#fff,#f2f5fb);padding:34px 30px;
+    display:flex;flex-direction:column;justify-content:center;text-align:center}
+  .summary h2{margin:0 0 6px;color:var(--teal);font-size:24px}
+  .summary p{margin:2px 0;color:var(--muted);font-size:15px}
+  .summary .big{font-size:44px;color:var(--good);font-weight:600;margin:6px 0}
+  .summary .acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px}
+  .summary .acts button{font:inherit;font-size:14px;border-radius:12px;padding:11px 16px;cursor:pointer;border:1px solid var(--rule)}
+  .summary .primary{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .summary .tricky{background:var(--warn-soft);color:#8a4b06;border-color:#e6cfa6}
+  .summary .ghost2{background:var(--card);color:var(--teal)}
+
+  .hidden{display:none !important}
+  @media (prefers-reduced-motion: reduce){.card,.bar{transition:none}}
+  @media (max-width:480px){.term{font-size:23px}.defn{font-size:16px}.face{padding:28px 22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">ENMGT 5900 · Project Management</span>
+    <h1>Module 2 — PM Tools & Methods</h1>
+    <span class="sub" id="sub"></span>
+  </header>
+
+  <div class="modes" role="group" aria-label="Mode">
+    <button id="mStudy" aria-pressed="true">Study</button>
+    <button id="mBrowse" aria-pressed="false">Browse</button>
+  </div>
+
+  <div class="controls">
+    <input class="search" id="search" type="search" placeholder="Filter terms or definitions…" aria-label="Filter cards">
+    <button class="ghost" id="shuffle">Shuffle</button>
+    <button class="ghost" id="restart">Restart</button>
+    <button class="ghost" id="resetprog" title="Clear mastered marks">Reset progress</button>
+  </div>
+
+  <div class="stats" id="statsRow">
+    <span>Mastered <b class="g" id="sKnown">0</b> / <b id="sTotal">0</b></span>
+    <span id="sQueueWrap">· In queue <b class="w" id="sQueue">0</b></span>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="summary hidden" id="summary"></div>
+    <div class="empty hidden" id="empty">No terms match your filter.</div>
+    <div class="card" id="card" tabindex="0" role="button" aria-label="Flashcard, press space to flip">
+      <div class="face front">
+        <span class="tag">Term</span><span class="pill">Mastered</span>
+        <div class="term" id="front"></div>
+        <div class="hint">Click / Space to flip</div>
+      </div>
+      <div class="face back">
+        <span class="tag">Definition</span>
+        <div class="defn" id="back"></div>
+        <div class="hint" id="backHint">Rate how you did</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rate locked" id="rateRow">
+    <button class="rev" id="btnReview">Review again<span class="k">2</span></button>
+    <button class="got" id="btnGot">Got it<span class="k">1</span></button>
+  </div>
+
+  <div class="nav hidden" id="navRow">
+    <button class="ghost" id="prev">← Prev</button>
+    <span class="counter" id="counter"></span>
+    <button class="ghost" id="next">Next →</button>
+  </div>
+
+  <div class="kbd" id="kbd">Space / F flips · 1 = Got it · 2 = Review again</div>
+</div>
+
+<script>
+const ALL = [{"t": "Project Charter", "d": "A foundational document that authorizes a project; created with the direct input of key stakeholders, not in isolation."}, {"t": "Work Breakdown Structure (WBS)", "d": "A hierarchical decomposition of the total project scope into smaller, manageable deliverables/work packages; used for projects of all sizes, not just large ones."}, {"t": "8/80 Rule", "d": "A WBS heuristic: a work package should represent no less than ~8 hours and no more than ~80 hours of effort."}, {"t": "Waterfall (Traditional) Project Management", "d": "A sequential, plan-heavy approach with defined phases; best for stable, well-defined projects with fixed requirements."}, {"t": "Agile Project Management", "d": "An iterative, adaptive approach built around fast feedback and change; fits the 'fail fast, fail often' mantra and evolving requirements."}, {"t": "Network Diagram", "d": "A graphical representation of a project's activities and their dependencies/sequence."}, {"t": "Activity-on-Arrow (AOA) vs. Activity-on-Node (AON)", "d": "Two network diagram conventions: AOA represents activities as arrows (nodes are events); AON represents activities as nodes (arrows are dependencies)."}, {"t": "Critical Path", "d": "The longest sequence of dependent activities through the network, which determines the shortest possible project duration — not a buyer-imposed deadline."}, {"t": "Float (Slack)", "d": "The amount of time an activity can be delayed without affecting the overall project duration."}, {"t": "Vision vs. Mission", "d": "Vision is the desired future state (what/why we aspire to); mission is why and how you'll get there."}, {"t": "Goal", "d": "A concrete, actionable target derived from vision/mission."}, {"t": "SMART Goal", "d": "A goal that is Specific, Measurable, Achievable, Relevant, and Time-bound — applies to everyday and advanced tasks alike."}, {"t": "Triple Constraint", "d": "The interdependent limits of scope, time (schedule), and cost (budget) — often visualized with quality at the center."}, {"t": "Co-Creation", "d": "A collaborative principle where team members share ownership of outcomes; it removes the ability to 'play the victim' when things go wrong."}, {"t": "Cognitive Distortion", "d": "Irrational or exaggerated thought patterns that skew perception of reality (a Module 2 EI concept)."}, {"t": "Emotional Reasoning", "d": "A cognitive distortion of treating feelings as facts ('I feel it, therefore it's true') despite contrary evidence."}, {"t": "Fourth Critical Concept", "d": "Rounding out 'vision, mission, goals,' the fourth key concept for PMs discussed in class — the completing pillar of the planning hierarchy."}];
+const STORE_KEY = "enmgt5900_m2_v1";
+
+const $ = id => document.getElementById(id);
+const card = $("card");
+
+function loadKnown(){ try{ return new Set(JSON.parse(localStorage.getItem(STORE_KEY)||"[]")); }catch(e){ return new Set(); } }
+function saveKnown(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify([...known])); }catch(e){} }
+
+let known = loadKnown();
+let mode = "study";
+let queue = [];
+let pool = ALL.slice();
+let struggled = new Set();
+let flipped = false;
+let bi = 0;
+
+function shuffle(a){ for(let k=a.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[a[k],a[j]]=[a[j],a[k]];} return a; }
+function setFace(c){
+  card.classList.add("instant");
+  flipped=false; card.classList.remove("flip");
+  card.classList.toggle("known", known.has(c.t));
+  $("front").textContent=c.t; $("back").textContent=c.d;
+  void card.offsetWidth;
+  requestAnimationFrame(()=>card.classList.remove("instant"));
+}
+function flip(){
+  flipped=!flipped; card.classList.toggle("flip",flipped);
+  if(mode==="study") $("rateRow").classList.toggle("locked", !flipped);
+}
+function poolMastered(){ return [...known].filter(t=>pool.some(c=>c.t===t)).length; }
+function updateStats(){
+  $("sKnown").textContent = poolMastered();
+  $("sTotal").textContent = pool.length;
+  $("bar").style.width = pool.length ? ((poolMastered()/pool.length)*100)+"%" : "0%";
+  if(mode==="study"){ $("sQueueWrap").classList.remove("hidden"); $("sQueue").textContent=queue.length; }
+  else $("sQueueWrap").classList.add("hidden");
+}
+
+function startSession(cards){
+  struggled = new Set();
+  queue = shuffle(cards.slice());
+  $("summary").classList.add("hidden");
+  $("empty").classList.toggle("hidden", cards.length>0);
+  card.classList.toggle("hidden", cards.length===0);
+  if(cards.length) present(); else updateStats();
+}
+function present(){
+  if(queue.length===0){ return summary(); }
+  card.classList.remove("hidden"); $("summary").classList.add("hidden"); $("empty").classList.add("hidden");
+  setFace(queue[0]);
+  $("rateRow").classList.add("locked");
+  updateStats();
+}
+function rate(gotIt){
+  if(!flipped || queue.length===0) return;
+  const c = queue.shift();
+  if(gotIt){ known.add(c.t); saveKnown(); }
+  else{ struggled.add(c.t); queue.splice(Math.min(queue.length,4),0,c); }
+  present();
+}
+function summary(){
+  card.classList.add("hidden"); $("empty").classList.add("hidden");
+  const s=$("summary"); s.classList.remove("hidden");
+  const total=pool.length, tricky=[...struggled];
+  s.innerHTML =
+    '<h2>Session complete</h2>'+
+    '<div class="big">'+poolMastered()+' / '+total+'</div>'+
+    '<p>terms mastered in this set.</p>'+
+    (tricky.length? '<p>'+tricky.length+' term'+(tricky.length>1?'s':'')+' needed a repeat before you got '+(tricky.length>1?'them':'it')+'.</p>':'<p>No repeats needed — clean run.</p>')+
+    '<div class="acts">'+
+      (tricky.length? '<button class="tricky" id="doTricky">Study the '+tricky.length+' tricky one'+(tricky.length>1?'s':'')+'</button>':'')+
+      '<button class="primary" id="doAgain">Study this set again</button>'+
+      '<button class="ghost2" id="doAll">Reset & study all</button>'+
+    '</div>';
+  updateStats();
+  if($("doTricky")) $("doTricky").onclick=()=>startSession(ALL.filter(c=>struggled.has(c.t)));
+  $("doAgain").onclick=()=>startSession(pool);
+  $("doAll").onclick=()=>{ known=new Set(); saveKnown(); startSession(pool); };
+}
+
+function browseRender(){
+  if(pool.length===0){ card.classList.add("hidden"); $("empty").classList.remove("hidden"); $("counter").textContent="0 / 0"; return; }
+  card.classList.remove("hidden"); $("empty").classList.add("hidden"); $("summary").classList.add("hidden");
+  bi=(bi+pool.length)%pool.length;
+  setFace(pool[bi]);
+  $("counter").textContent=(bi+1)+" / "+pool.length;
+  updateStats();
+}
+
+function applyFilter(q){
+  q=(q||"").trim().toLowerCase();
+  pool = q ? ALL.filter(c=>(c.t+" "+c.d).toLowerCase().includes(q)) : ALL.slice();
+  bi=0;
+  if(mode==="study"){ const todo=pool.filter(c=>!known.has(c.t)); startSession(todo.length?todo:pool); }
+  else browseRender();
+}
+function setMode(m){
+  mode=m;
+  $("mStudy").setAttribute("aria-pressed", m==="study");
+  $("mBrowse").setAttribute("aria-pressed", m==="browse");
+  $("rateRow").classList.toggle("hidden", m!=="study");
+  $("navRow").classList.toggle("hidden", m==="study");
+  $("kbd").textContent = m==="study" ? "Space / F flips · 1 = Got it · 2 = Review again"
+                                     : "← → browse · Space / F flips";
+  if(m==="study"){ const todo=pool.filter(c=>!known.has(c.t)); startSession(todo.length?todo:pool); }
+  else browseRender();
+}
+
+card.addEventListener("click", flip);
+$("btnGot").onclick=()=>rate(true);
+$("btnReview").onclick=()=>rate(false);
+$("mStudy").onclick=()=>setMode("study");
+$("mBrowse").onclick=()=>setMode("browse");
+$("prev").onclick=()=>{bi--;browseRender();};
+$("next").onclick=()=>{bi++;browseRender();};
+$("shuffle").onclick=()=>{ if(mode==="study"){shuffle(queue);present();} else {shuffle(pool);bi=0;browseRender();} };
+$("restart").onclick=()=>{ if(mode==="study"){const todo=pool.filter(c=>!known.has(c.t));startSession(todo.length?todo:pool);} else {bi=0;browseRender();} };
+$("resetprog").onclick=()=>{ known=new Set(); saveKnown(); setMode(mode); };
+$("search").addEventListener("input", e=>applyFilter(e.target.value));
+
+document.addEventListener("keydown", e=>{
+  if(e.target.tagName==="INPUT") return;
+  const k=e.key.toLowerCase();
+  if(k===" "||k==="f"){flip();e.preventDefault();}
+  else if(mode==="study"){
+    if(k==="1"||k==="j"){rate(true);e.preventDefault();}
+    else if(k==="2"||k==="k"){rate(false);e.preventDefault();}
+  } else {
+    if(e.key==="ArrowRight"){bi++;browseRender();e.preventDefault();}
+    else if(e.key==="ArrowLeft"){bi--;browseRender();e.preventDefault();}
+  }
+});
+
+$("sub").textContent = ALL.length + " terms · flip, then rate yourself — missed cards come back until you clear them";
+setMode("study");
+</script>
+</body>
+</html>
