@@ -1,343 +1,629 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ENMGT 5940 — Glossary Flashcards</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-  /* Fonts unchanged (serif body + mono labels). Colors = Cornell brand:
-     Carnelian #B31B1B, ink #303030, grays, white surfaces (from 5900 deck). */
   :root{
     --ink:#303030; --paper:#f2f2f3; --card:#ffffff; --rule:#d9d6d0;
     --brand:#B31B1B; --brand-dark:#8a1414; --brand-soft:#f0dcdc;
-    --muted:#5b5f63; --good:#2f7d59; --good-soft:#dcece1;
-    --warn:#b45309; --warn-soft:#f3e4cd;
+    --muted:#5b5f63; --good:#2f7d59; --good-soft:#dcece1; --good-bd:#bcd9c8;
+    --warn:#b45309; --warn-soft:#f3e4cd; --warn-bd:#e6cfa6;
+    --shadow:rgba(48,48,48,.55);
+  }
+  html[data-theme="dark"]{
+    --ink:#e9e6e2; --paper:#151517; --card:#232326; --rule:#3a3a3d;
+    --brand:#e2555a; --brand-dark:#c23b40; --brand-soft:#3a2325;
+    --muted:#a7a29c; --good:#7fcfa3; --good-soft:#22332a; --good-bd:#2f4a3a;
+    --warn:#e0a35a; --warn-soft:#3a2f1e; --warn-bd:#4d3f28;
+    --shadow:rgba(0,0,0,.6);
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{
-    background:radial-gradient(120% 80% at 50% -10%, #ffffff 0%, var(--paper) 60%);
+    background:radial-gradient(120% 80% at 50% -10%, var(--card) 0%, var(--paper) 62%);
     color:var(--ink);
     font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
     -webkit-font-smoothing:antialiased;min-height:100%;
-    display:flex;flex-direction:column;align-items:center;padding:26px 18px 52px;
+    display:flex;flex-direction:column;align-items:center;padding:24px 18px 52px;
   }
   .wrap{width:100%;max-width:720px}
-  header{display:flex;flex-direction:column;gap:3px;margin-bottom:14px}
+  .topline{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  header{display:flex;flex-direction:column;gap:3px;margin-bottom:6px}
   .eyebrow{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-    letter-spacing:.18em;text-transform:uppercase;font-size:11px;color:var(--brand)}
-  h1{margin:0;font-size:25px;font-weight:600;letter-spacing:-.01em;color:var(--brand)}
-  .sub{color:var(--muted);font-size:13.5px}
+    letter-spacing:.16em;text-transform:uppercase;font-size:11px;color:var(--brand)}
+  h1{margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;color:var(--brand)}
+  .sub{color:var(--muted);font-size:13px}
+  .iconbtn{font:inherit;font-size:13px;border:1px solid var(--rule);background:var(--card);
+    color:var(--brand);border-radius:9px;padding:7px 10px;cursor:pointer}
+  .iconbtn:hover{filter:brightness(.98)}
 
-  .modes{display:inline-flex;border:1px solid var(--rule);border-radius:10px;
-    overflow:hidden;margin:14px 0 12px;background:var(--card)}
-  .modes button{border:0;background:transparent;color:var(--muted);
-    padding:8px 16px;font:inherit;font-size:13px;cursor:pointer}
-  .modes button[aria-pressed="true"]{background:var(--brand);color:#fff}
+  .seg{display:inline-flex;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--card)}
+  .seg button{border:0;background:transparent;color:var(--muted);padding:8px 15px;font:inherit;font-size:13px;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--brand);color:#fff}
+  .segrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0 10px}
+  .seglabel{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{font:inherit;font-size:12px;border:1px solid var(--rule);background:var(--card);color:var(--muted);
+    border-radius:99px;padding:5px 11px;cursor:pointer;white-space:nowrap}
+  .chip[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
+  .chip .n{opacity:.65;font-size:11px;margin-left:4px}
+  .chip.star[aria-pressed="true"]{background:var(--warn);border-color:var(--warn)}
 
   .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-  .search{flex:1 1 190px;min-width:150px;border:1px solid var(--rule);border-radius:10px;
+  .search{flex:1 1 180px;min-width:140px;border:1px solid var(--rule);border-radius:10px;
     padding:9px 12px;font:inherit;font-size:14px;background:var(--card);color:var(--ink)}
   .search:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:transparent}
   button.ghost{font:inherit;font-size:13px;border:1px solid var(--rule);background:var(--card);
-    color:var(--brand);border-radius:10px;padding:9px 13px;cursor:pointer;
-    transition:transform .08s ease,background .15s ease}
-  button.ghost:hover{background:#fdf4f4}
+    color:var(--brand);border-radius:10px;padding:9px 13px;cursor:pointer;transition:transform .08s,background .15s}
+  button.ghost:hover{filter:brightness(.98)}
   button.ghost:active{transform:translateY(1px)}
   button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 
-  .stats{display:flex;align-items:center;gap:14px;margin-bottom:10px;
+  .stats{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;
     font-family:ui-monospace,monospace;font-size:12px;color:var(--muted)}
-  .stats b{font-weight:600}
-  .stats .g{color:var(--good)} .stats .w{color:var(--warn)}
-  .progress{flex:1;height:6px;border-radius:99px;background:var(--brand-soft);
-    overflow:hidden;min-width:80px}
-  .bar{height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-dark));width:0;
-    transition:width .3s ease}
+  .stats b{font-weight:600;color:var(--ink)}
+  .stats .g{color:var(--good)} .stats .w{color:var(--warn)} .stats .r{color:var(--brand)}
+  .progress{flex:1;height:6px;border-radius:99px;background:var(--brand-soft);overflow:hidden;min-width:70px}
+  .bar{height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-dark));width:0;transition:width .3s}
 
   .stage{perspective:1600px}
+  .panel{border:1px solid var(--rule);border-radius:18px;background:var(--card);
+    box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 16px 36px -24px var(--shadow);
+    padding:32px 30px;min-height:300px;display:flex;flex-direction:column;justify-content:center}
+  /* flip card */
   .card{position:relative;width:100%;min-height:300px;cursor:pointer;
     transform-style:preserve-3d;transition:transform .5s cubic-bezier(.4,.2,.2,1);border-radius:18px}
-  .card.flip{transform:rotateY(180deg)}
-  .card.instant{transition:none}
+  .card.flip{transform:rotateY(180deg)} .card.instant{transition:none}
   .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
     border:1px solid var(--rule);border-radius:18px;background:var(--card);
-    box-shadow:0 1px 0 #fff inset,0 16px 36px -24px rgba(48,48,48,.55);
-    padding:36px 30px;display:flex;flex-direction:column;justify-content:center}
-  .face .tag{position:absolute;top:16px;left:18px;font-family:ui-monospace,monospace;
-    font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+    box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 16px 36px -24px var(--shadow);
+    padding:34px 30px;display:flex;flex-direction:column;justify-content:center}
+  .face .tag{position:absolute;top:15px;left:18px;font-family:ui-monospace,monospace;
+    font-size:10px;letter-spacing:.14em;text-transform:uppercase}
   .front .tag{color:var(--brand)} .back .tag{color:var(--muted)}
-  .pill{position:absolute;top:14px;right:16px;font-family:ui-monospace,monospace;
-    font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--good);
-    background:var(--good-soft);border-radius:99px;padding:3px 9px;display:none}
-  .card.known .pill{display:inline-block}
-  .back{transform:rotateY(180deg);background:linear-gradient(180deg,#fff 0%,#fbf5f5 100%)}
-  .term{font-size:27px;line-height:1.2;font-weight:600;color:var(--brand);letter-spacing:-.01em}
+  .catlabel{position:absolute;top:14px;right:16px;font-family:ui-monospace,monospace;font-size:9.5px;
+    letter-spacing:.06em;text-transform:uppercase;color:var(--muted);opacity:.8;max-width:55%;text-align:right}
+  .starbtn{position:absolute;bottom:13px;right:16px;border:0;background:transparent;cursor:pointer;
+    font-size:18px;line-height:1;color:var(--rule)}
+  .starbtn.on{color:var(--warn)}
+  .back{transform:rotateY(180deg)}
+  .term{font-size:26px;line-height:1.22;font-weight:600;color:var(--brand);letter-spacing:-.01em}
   .defn{font-size:18px;line-height:1.5;color:var(--ink)}
-  .hint{position:absolute;bottom:15px;left:0;right:0;text-align:center;
-    font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;
-    text-transform:uppercase;color:var(--muted)}
+  .hint{position:absolute;bottom:14px;left:0;right:0;text-align:center;font-family:ui-monospace,monospace;
+    font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+  /* quiz */
+  .qtag{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+  .qprompt{font-size:19px;line-height:1.5;color:var(--ink);margin-bottom:18px}
+  .qinput{width:100%;border:1px solid var(--rule);border-radius:12px;padding:13px 14px;font:inherit;font-size:17px;background:var(--card);color:var(--ink)}
+  .qinput:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:transparent}
+  .choices{display:grid;gap:9px}
+  .choice{text-align:left;font:inherit;font-size:16px;border:1px solid var(--rule);background:var(--card);color:var(--ink);
+    border-radius:12px;padding:13px 15px;cursor:pointer;transition:filter .12s}
+  .choice:hover{filter:brightness(.98)}
+  .choice.correct{background:var(--good-soft);border-color:var(--good-bd);color:var(--good)}
+  .choice.wrong{background:var(--warn-soft);border-color:var(--warn-bd);color:var(--warn)}
+  .choice:disabled{cursor:default}
+  .qresult{margin-top:16px;font-size:16px;line-height:1.45}
+  .qresult .ok{color:var(--good);font-weight:600} .qresult .no{color:var(--brand);font-weight:600}
+  .qresult .ans{color:var(--ink)}
 
   .rate{display:flex;gap:12px;margin-top:16px}
-  .rate button{flex:1;font:inherit;font-size:15px;border-radius:12px;padding:14px;
-    cursor:pointer;border:1px solid var(--rule);transition:transform .08s ease,filter .15s ease,opacity .15s}
+  .rate button{flex:1;font:inherit;font-size:15px;border-radius:12px;padding:14px;cursor:pointer;
+    border:1px solid var(--rule);transition:transform .08s,filter .15s,opacity .15s}
   .rate button:active{transform:translateY(1px)}
-  .rate .got{background:var(--good-soft);border-color:#bcd9c8;color:#1e5a3d}
-  .rate .rev{background:var(--warn-soft);border-color:#e6cfa6;color:#8a4b06}
-  .rate button:hover{filter:brightness(1.03)}
+  .rate .got{background:var(--good-soft);border-color:var(--good-bd);color:var(--good)}
+  .rate .rev{background:var(--warn-soft);border-color:var(--warn-bd);color:var(--warn)}
   .rate.locked button{opacity:.4;cursor:not-allowed}
   .rate .k{font-family:ui-monospace,monospace;font-size:11px;opacity:.7;margin-left:6px}
 
   .nav{display:flex;align-items:center;gap:12px;margin-top:16px;justify-content:center}
-  .nav .ghost{min-width:104px}
-  .counter{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);min-width:64px;text-align:center}
+  .nav .ghost{min-width:100px}
+  .counter{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);min-width:60px;text-align:center}
+  .actrow{display:flex;gap:10px;margin-top:16px;justify-content:flex-end}
+  .actrow .primary{background:var(--brand);color:#fff;border:1px solid var(--brand);border-radius:12px;padding:12px 18px;font:inherit;font-size:14px;cursor:pointer}
 
-  .kbd{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);
-    text-align:center;margin-top:14px}
-  .empty{padding:40px;text-align:center;color:var(--muted);
-    border:1px dashed var(--rule);border-radius:18px;min-height:300px;
-    display:flex;align-items:center;justify-content:center}
+  .kbd{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);text-align:center;margin-top:14px}
+  .empty{color:var(--muted);text-align:center}
 
-  .summary{min-height:300px;border:1px solid var(--rule);border-radius:18px;
-    background:linear-gradient(180deg,#fff,#fbf5f5);padding:34px 30px;
-    display:flex;flex-direction:column;justify-content:center;text-align:center}
-  .summary h2{margin:0 0 6px;color:var(--brand);font-size:24px}
+  .summary{text-align:center}
+  .summary h2{margin:0 0 4px;color:var(--brand);font-size:23px}
   .summary p{margin:2px 0;color:var(--muted);font-size:15px}
-  .summary .big{font-size:44px;color:var(--brand);font-weight:600;margin:6px 0}
-  .summary .acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px}
-  .summary .acts button{font:inherit;font-size:14px;border-radius:12px;padding:11px 16px;cursor:pointer;border:1px solid var(--rule)}
-  .summary .primary{background:var(--brand);color:#fff;border-color:var(--brand)}
-  .summary .tricky{background:var(--warn-soft);color:#8a4b06;border-color:#e6cfa6}
-  .summary .ghost2{background:var(--card);color:var(--brand)}
+  .summary .big{font-size:40px;color:var(--brand);font-weight:600;margin:6px 0}
+  .sgrid{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin:10px 0 4px}
+  .sgrid div{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted)}
+  .sgrid b{display:block;font-size:20px;color:var(--ink);font-family:inherit}
+  .missed{font-size:13px;color:var(--muted);margin-top:10px}
+  .acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:16px}
+  .acts button{font:inherit;font-size:14px;border-radius:12px;padding:11px 16px;cursor:pointer;border:1px solid var(--rule)}
+  .acts .primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .acts .ghost2{background:var(--card);color:var(--brand)}
 
   .hidden{display:none !important}
   @media (prefers-reduced-motion: reduce){.card,.bar{transition:none}}
-  @media (max-width:480px){.term{font-size:23px}.defn{font-size:16px}.face{padding:28px 22px}}
+  @media (max-width:480px){.term{font-size:22px}.defn{font-size:16px}.face,.panel{padding:26px 20px}}
+
+  /* print */
+  #printSheet{display:none}
+  @media print{
+    body *{visibility:hidden}
+    #printSheet,#printSheet *{visibility:visible}
+    #printSheet{display:block;position:absolute;left:0;top:0;width:100%}
+    #printSheet h2{color:#000;font-size:18px;margin:0 0 4px}
+    #printSheet .pcat{font-weight:700;margin:14px 0 4px;font-size:13px;border-bottom:1px solid #999}
+    #printSheet .prow{margin:6px 0;font-size:12px;line-height:1.4}
+    #printSheet .pt{font-weight:700}
+  }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <span class="eyebrow">ENMGT 5940 · Engineering Economics</span>
-    <h1>Glossary Flashcards</h1>
-    <span class="sub" id="sub"></span>
-  </header>
-
-  <div class="modes" role="group" aria-label="Mode">
-    <button id="mStudy" aria-pressed="true">Study</button>
-    <button id="mBrowse" aria-pressed="false">Browse</button>
+  <div class="topline">
+    <header>
+      <span class="eyebrow">ENMGT 5940 · Engineering Economics</span>
+      <h1>Glossary Flashcards</h1>
+      <span class="sub" id="sub"></span>
+    </header>
+    <div style="display:flex;gap:6px">
+      <button class="iconbtn" id="theme" title="Toggle dark mode">Dark</button>
+      <button class="iconbtn" id="print" title="Print study sheet">Print</button>
+    </div>
   </div>
+
+  <div class="segrow">
+    <div class="seg" role="group" aria-label="Mode">
+      <button id="mStudy" aria-pressed="true">Study</button>
+      <button id="mBrowse" aria-pressed="false">Browse</button>
+    </div>
+    <span class="seglabel" id="styleLabel">Style</span>
+    <div class="seg" id="styleSeg" role="group" aria-label="Study style">
+      <button id="sFlip" aria-pressed="true">Flip</button>
+      <button id="sType" aria-pressed="false">Type</button>
+      <button id="sChoice" aria-pressed="false">Choice</button>
+    </div>
+  </div>
+
+  <div class="chips" id="chips"></div>
 
   <div class="controls">
     <input class="search" id="search" type="search" placeholder="Filter terms or definitions…" aria-label="Filter cards">
     <button class="ghost" id="shuffle">Shuffle</button>
     <button class="ghost" id="restart">Restart</button>
-    <button class="ghost" id="resetprog" title="Clear mastered marks">Reset progress</button>
+    <button class="ghost" id="reset">Reset progress</button>
   </div>
 
   <div class="stats" id="statsRow">
-    <span>Mastered <b class="g" id="sKnown">0</b> / <b id="sTotal">0</b></span>
-    <span id="sQueueWrap">· In queue <b class="w" id="sQueue">0</b></span>
+    <span>Due <b class="r" id="sDue">0</b></span>
+    <span>Mastered <b class="g" id="sKnown">0</b>/<b id="sTotal">0</b></span>
+    <span>Streak <b id="sStreak">0</b>d</span>
     <div class="progress"><div class="bar" id="bar"></div></div>
   </div>
 
   <div class="stage" id="stage">
-    <div class="summary hidden" id="summary"></div>
-    <div class="empty hidden" id="empty">No terms match your filter.</div>
+    <!-- flip card -->
     <div class="card" id="card" tabindex="0" role="button" aria-label="Flashcard, press space to flip">
       <div class="face front">
-        <span class="tag">Term</span><span class="pill">Mastered</span>
+        <span class="tag">Term</span><span class="catlabel" id="fcat"></span>
         <div class="term" id="front"></div>
+        <button class="starbtn" id="starF" title="Star this card" aria-label="Star this card">&#9734;</button>
         <div class="hint">Click / Space to flip</div>
       </div>
       <div class="face back">
         <span class="tag">Definition</span>
         <div class="defn" id="back"></div>
-        <div class="hint" id="backHint">Rate how you did</div>
+        <div class="hint">Click / Space to flip</div>
       </div>
     </div>
+    <!-- quiz -->
+    <div class="panel hidden" id="quiz">
+      <div class="qtag" id="qtag">Type the term</div>
+      <div class="qprompt defn" id="qprompt"></div>
+      <input class="qinput hidden" id="qinput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the term, then Enter…">
+      <div class="choices hidden" id="qchoices"></div>
+      <div class="qresult hidden" id="qresult"></div>
+    </div>
+    <!-- summary / empty -->
+    <div class="panel hidden" id="summary"></div>
+    <div class="panel hidden" id="empty"><div class="empty" id="emptyMsg">Nothing here.</div></div>
   </div>
 
-  <div class="rate locked" id="rateRow">
+  <!-- action rows -->
+  <div class="rate locked hidden" id="rateRow">
     <button class="rev" id="btnReview">Review again<span class="k">2</span></button>
     <button class="got" id="btnGot">Got it<span class="k">1</span></button>
   </div>
-
   <div class="nav hidden" id="navRow">
     <button class="ghost" id="prev">← Prev</button>
     <span class="counter" id="counter"></span>
     <button class="ghost" id="next">Next →</button>
   </div>
+  <div class="actrow hidden" id="qactRow">
+    <button class="primary" id="qSubmit">Check</button>
+  </div>
 
-  <div class="kbd" id="kbd">Space / F flips · 1 = Got it · 2 = Review again</div>
+  <div class="kbd" id="kbd"></div>
 </div>
 
+<div id="printSheet"></div>
+
 <script>
-/* Built-in copy of the list — used if econ_glossary.xlsx can't be loaded. */
-const FALLBACK = [{"t": "Absorption Costing", "d": "A cost accounting method that allocates fixed overhead costs to each unit produced in the relevant period."}, {"t": "Accounting", "d": "The act or process of keeping records and financial accounts of all transactions."}, {"t": "Accounts Receivable (AR / A/R)", "d": "Money owed to a company by its debtors. Typically the money due from customers for products shipped or services rendered but not yet paid for."}, {"t": "Accounts Payable (AP / A/P)", "d": "Money a company owes to others, excluding shareholders or owners — e.g. money owed to vendors for parts and services received but not yet paid for."}, {"t": "Accrued", "d": "An amount accumulated over a period of time."}, {"t": "Accrued Interest", "d": "Interest that has accumulated since the principal investment, or since the previous compounding period."}, {"t": "Activity-Based Costing", "d": "A costing method that identifies activities in an organization and assigns the cost of each activity to all products and services according to the actual consumption by each."}, {"t": "Amortization", "d": "The spreading out of payments over a period of time."}, {"t": "Amortization of Loans", "d": "The process of spreading out a loan into a series of (usually fixed) payments over time, as shown in an amortization schedule."}, {"t": "Amortization of Assets", "d": "The allocation of the cost of intangible assets (e.g. patents) over their economic useful life, represented within expenses on the Income Statement."}, {"t": "Allocated Cost", "d": "A cost that has been assigned to a specific cost object such as a product line, department, business unit, or program (e.g. assigning plant overhead to product lines)."}, {"t": "Amortization Schedule", "d": "A schedule that lists, for each payment period: the loan payment, interest paid, principal paid, and remaining balance."}, {"t": "Analysis Period / Planning Horizon / Project Life", "d": "The time period considered for a present worth analysis — usually the time needed to accomplish the task and/or the life of the project."}, {"t": "Annual Cost", "d": "The cost per year of owning and operating an asset over its entire lifespan."}, {"t": "Annuity Due", "d": "Uniform cash flows that occur at the beginning of each period — e.g. lease, rent, insurance, and tuition payments."}, {"t": "Assets", "d": "Property owned by a company that has a quantified value."}, {"t": "Average Cost", "d": "The total cost divided by the number of units produced."}, {"t": "Balance Sheet", "d": "A standard financial report that summarizes all Assets, Liabilities, and Equity of a company as of a given date — a snapshot at a point in time."}, {"t": "Benefits", "d": "Advantages gained as a result of a decision, action, or event — an increase in something positive (cash, morale) or a decrease in something negative (costs, risks)."}, {"t": "Benefit-Cost Ratio", "d": "PW of benefits / PW of costs."}, {"t": "Beta Distribution", "d": "A probability distribution. A common simple form used in economic analysis: mean = (optimistic + 4 × most likely + pessimistic) / 6."}, {"t": "Book Cost", "d": "A cost reflected in the records and statements of a company that does not directly reflect actual cash payments."}, {"t": "Break-Even Point", "d": "The point at which total costs equal total benefits, so profit is zero. May be expressed as a sales dollar amount, a sales volume, or a period of time (e.g. 15,000 units ≈ 9 months of sales)."}, {"t": "Break-Even Analysis", "d": "A form of sensitivity analysis, often presented as a break-even chart."}, {"t": "Capital Recovery Cost", "d": "The equivalent uniform annual cost of the net capital expenditure, including both initial costs and salvage values (if any)."}, {"t": "Capitalized Cost", "d": "The present worth of cost when the analysis has an infinite analysis period."}, {"t": "Cash Disbursement", "d": "Also called cash payments; payments made by a company during a specified period such as a quarter or year."}, {"t": "Cash Flow Diagram", "d": "A visual representation of cash flows in and out over a number of time periods."}, {"t": "Cash Receipts", "d": "Money received by a company during a specified period such as a quarter or year."}, {"t": "Cash Equivalents", "d": "Short-term liquid investments that can readily be converted to cash in a short period without significant risk to their relative value."}, {"t": "Compound Interest", "d": "Interest on a deposit or loan that itself earns interest in later periods."}, {"t": "Contribution Margin", "d": "The amount a unit sale contributes to profit."}, {"t": "Cost", "d": "An outlay, expenditure, or anything given up in order to obtain or accomplish something."}, {"t": "Cost Indexing", "d": "A method of using historical changes in costs to scale cost estimates. Cost at time B = (Cost at time A) × [(Index at time B) / (Index at time A)]."}, {"t": "Per-Unit Model", "d": "A cost-estimating model in which a cost estimate is made for a single unit; total cost = X × (cost per unit)."}, {"t": "Power-Sizing Model", "d": "A cost-estimating model that explicitly accounts for economies of scale by using a power-sizing factor or exponent."}, {"t": "Learning-Curve Cost Estimating", "d": "Based on the assumption that as a task is repeated the operator systematically becomes quicker (and other barriers to peak efficiency reduce over time)."}, {"t": "Cost of Capital", "d": "The internal rate of return needed to make a capital project worthwhile — typically a weighted average cost of capital (WACC), unless financed solely through equity or solely through debt."}, {"t": "Current Assets", "d": "Assets expected to convert to cash within the next 12 months through normal operations (e.g. cash, accounts receivable, inventories)."}, {"t": "Current Cost", "d": "The economic value of resources used or required now, regardless of how they appear in accounting statements."}, {"t": "Current Expense", "d": "An operating cost recognized in the present accounting period, typically tied to activities within the current fiscal year."}, {"t": "Current Liabilities", "d": "Liabilities due within the next 12 months (e.g. accounts payable)."}, {"t": "Current Ratio", "d": "A liquidity ratio measuring ability to pay short-term obligations. Current Ratio = Current Assets / Current Liabilities. ~1.5–3.0 is often healthy; below 1.5 may signal trouble paying liabilities."}, {"t": "Debt-to-Equity Ratio (D/E)", "d": "A measure of financial leverage: the degree to which a company finances operations using debt versus wholly-owned funds. D/E = Total Liabilities / Shareholder Equity."}, {"t": "Decision Tree", "d": "A decision-support tool using a tree-like graph of decisions and their possible consequences, including chance outcomes, resource costs, and utility."}, {"t": "Decision Tree Nodes", "d": "Chance node = a probabilistic event (each outcome has a probability). Decision node = the decision-maker chooses one available path. Outcome node = shows the result for a particular path."}, {"t": "Depletion", "d": "An accrual accounting technique used to allocate the cost of extracting natural resources such as timber, minerals, and oil from the earth."}, {"t": "Depreciation", "d": "A reduction of value over time. In accounting: allocation of a tangible asset's cost to expense periods over its useful life (set by a depreciation schedule). In economic analysis: the decrease in an asset's market value, which may be non-uniform."}, {"t": "Direct Costs", "d": "Costs from activities that can be directly associated with the final product or service (e.g. direct material, direct labor)."}, {"t": "Discounted Cash Flow (DCF)", "d": "The analysis of cash flow that adjusts for the time value of money."}, {"t": "Discount Rate", "d": "The interest rate used in financial analyses to convert future sums to a present value (or vice versa)."}, {"t": "Dollar-Years", "d": "A measure of how long and how much money is tied up — the economic footprint of capital over time. The area under the value-versus-time curve (dollars on the vertical axis, years on the horizontal)."}, {"t": "Economics", "d": "The study of how people and organizations make choices about using limited resources to produce, distribute, and consume goods and services."}, {"t": "Economic Value", "d": "The worth of a resource, action, or outcome based on its expected benefits, alternatives, and opportunity cost — not simply its purchase price or accounting value."}, {"t": "End-of-Year Convention", "d": "Treating cash flows as if they occur at the end of a year."}, {"t": "Engineering Economics", "d": "The application of economic principles and quantitative analysis to evaluate engineering alternatives and support decisions about projects, systems, and investments over time."}, {"t": "Rough Estimate", "d": "Order-of-magnitude, back-of-the-envelope estimate with limited detail or accuracy; used for high-level planning, feasibility, and a project's initial planning phases."}, {"t": "Semi-Detailed Estimate", "d": "A more detailed estimate used for budgeting at a project's conceptual or preliminary design stages."}, {"t": "Detailed Estimate", "d": "An estimate made from detailed quantitative models, blueprints, spec sheets, and vendor quotes; used during detailed design and contract bidding."}, {"t": "Equity", "d": "The difference between the value of an asset and the liabilities associated with it. Shareholder equity = Assets − Liabilities; the amount left for owners if all assets were liquidated and liabilities paid."}, {"t": "Equivalency", "d": "The relative equality between differing cash flows based on the time value of money."}, {"t": "Exact Economic Analysis Methods", "d": "The four exact methods: Present Worth analysis, Annual Cash Flow analysis, Rate of Return analysis, and Benefit-Cost ratio analysis."}, {"t": "Expected Value", "d": "The probability-weighted average of all possible values."}, {"t": "External Costs", "d": "Costs external to the company — hard to estimate and typically not used in pricing or business analysis (e.g. end-of-life disposal, environmental effects, health impacts, social costs)."}, {"t": "Factory Overhead", "d": "Also Manufacturing Overhead or Factory Burden: indirect costs incurred when a product is produced. Allocated to production and included within COGS."}, {"t": "Finance", "d": "The study and management of money over time — how funds are raised, invested, and allocated to create value while managing risk; also how assets are valued and how the cost of capital influences decisions."}, {"t": "Financial Statements", "d": "Standard statements companies report to summarize current status and changes over a period: the Balance Sheet, the Income Statement, and the Statement of Cash Flows (sometimes a fourth — the Statement of Shareholder Equity)."}, {"t": "Fixed Asset", "d": "Tangible assets NOT expected to convert to cash within the next 12 months through normal operations (e.g. buildings, equipment, PP&E)."}, {"t": "Fixed Costs", "d": "Business costs that are fixed regardless of production volume; they must be paid regardless of output. Usually treated as operating expenses (insurance, SG&A, salaries, most utilities), though some — like factory overhead — may sit in COGS."}, {"t": "Fundamental Accounting Equation", "d": "Assets = Liabilities + Equity."}, {"t": "Future Value / Future Worth", "d": "The value of an asset at a specified future date, based on an assumed rate of growth."}, {"t": "Goodwill", "d": "An intangible asset arising when an existing business is purchased above the fair value of its quantifiable assets minus liabilities (e.g. brand name, customer base, patents, trade secrets)."}, {"t": "Graphical Approach", "d": "Using graphs to find, interpret, or represent the results of several alternatives."}, {"t": "Income Statement", "d": "A standard financial report summarizing Income, COGS, Gross Profit, and Operating expenses for a period, resulting in Net Profit or Net Loss. Also called the Profit & Loss (P&L) statement."}, {"t": "Indirect Costs", "d": "Costs from activities that CANNOT be directly associated with the final product or service (e.g. insurance, most utilities, SG&A, R&D)."}, {"t": "Incremental Cost", "d": "The difference in the cost of one alternative compared to the cost of another alternative."}, {"t": "Incremental Rate of Return", "d": "An analysis of financial return where two competing investments require different amounts; applied to the difference between the costs of the two investments."}, {"t": "Intangible Assets", "d": "Non-physical assets with a useful life greater than one year (e.g. trademarks, patents, customer lists, goodwill)."}, {"t": "Intangible Benefits", "d": "Benefits that cannot be quantified and measured in terms of money (e.g. reputation, morale, goodwill)."}, {"t": "Intangible Costs", "d": "Costs difficult or impossible to quantify and/or to allocate accurately to a source (e.g. lower employee morale, customer dissatisfaction, brand damage). May be internal or external."}, {"t": "Internal Costs", "d": "Costs internal to the company that can typically be estimated and measured for pricing or profitability (e.g. materials, parts, labor, equipment, overhead)."}, {"t": "Internal Rate of Return (IRR)", "d": "A measure of an alternative's profitability — the discount rate at which NPV = 0 (PW = 0 = EUAW). On a loan, the interest rate on the unpaid balance; on an investment, the rate earned on the un-recovered investment."}, {"t": "Interest Payment", "d": "A payment determined by the interest rate and the remaining principal owed. Loan payments often include both a principal payment and an interest payment."}, {"t": "Interest Rate", "d": "The charge made for the loan of financial capital, expressed as a proportion of the loan."}, {"t": "Nominal Interest Rate", "d": "The annual interest rate without considering the effect of any compounding."}, {"t": "Effective Interest Rate", "d": "The annual interest rate taking into account the effect of any compounding during the year."}, {"t": "Annual Percentage Rate (APR)", "d": "The rate of interest that equates the present discounted value of funds received to the present discounted value of payments made."}, {"t": "Annual Percentage Yield (APY)", "d": "The effective interest rate earned on savings accounts, certificates of deposit, and bonds."}, {"t": "Inventory", "d": "Merchandise, raw materials, and work in process a company has on hand that is available for sale or will be used to produce items for sale."}, {"t": "Inventory Turnover (Inventory Turns)", "d": "A ratio of how effectively a company turns money tied up in inventory into cash: COGS / Average Total Inventory (sometimes Total Sales Revenue / Average Total Inventory). How many times inventory is sold and replaced per period."}, {"t": "JIT (Just-In-Time)", "d": "An inventory management strategy that closely aligns delivery of inventory with the production schedule to reduce inventory levels and increase efficiency."}, {"t": "KPI (Key Performance Indicator)", "d": "A measurable variable indicating how effectively a company, department, or team manages, maintains, or improves a metric aligned with business objectives."}, {"t": "Liquidity", "d": "A measure of how quickly an asset can be converted to cash (or another asset) without risk of loss to its intrinsic value. Cash is the most liquid; a building or rare antique is highly illiquid."}, {"t": "Liabilities", "d": "What a company owes to others besides its owners — financial, legal, or material debts arising during business that the company is obligated to fulfill."}, {"t": "Life-Cycle Cost", "d": "All costs over the entire life of a product, structure, system, or service."}, {"t": "Marginal Cost", "d": "The cost associated with producing one more (the next) unit. A marginal cost is a form of incremental cost, but incremental cost applies to a much wider variety of comparisons — the terms are not broadly equivalent."}, {"t": "MARR (Minimum Acceptable Rate of Return)", "d": "The minimum rate of return on a project a company is willing to accept before starting it, given its risk and the opportunity cost of forgoing other projects."}, {"t": "Monte Carlo Simulation", "d": "A technique to understand the impact of risk and uncertainty in financial, project, cost, and other forecasting models by visualizing most or all potential outcomes."}, {"t": "Net Present Worth (NPW)", "d": "PW of benefits − PW of costs. Same as Present Worth (PW) or Present Value (PV); the 'Net' prefix simply reminds that both benefits and costs are included."}, {"t": "Non-Recurring Costs", "d": "Extraordinary and/or one-time expenses not expected to recur (e.g. certain legal fees, acquisition costs, purchasing a new building, severance packages)."}, {"t": "Opportunity Cost", "d": "The benefits foregone when one alternative is chosen over another — the loss of potential gains from the option not selected."}, {"t": "Owner's Equity", "d": "The portion of a company's assets that owners have a claim to. Equity is one of two sources of funds for assets, the other being liabilities (debt)."}, {"t": "Overhead", "d": "Ongoing business expenses not directly attributed to producing a product or service."}, {"t": "Payback Period", "d": "The time required for a project's gains or benefits to equal its cost; usually measured in months."}, {"t": "P&L (Profit and Loss Statement)", "d": "Another name for the Income Statement."}, {"t": "Prepaid (Prepaid Expense)", "d": "An expense paid for an asset in one period for use in a future period (e.g. prepaid leases, down payments, insurance). Shown as an asset on the balance sheet; the recipient shows it as unearned revenue (a liability)."}, {"t": "Present Value", "d": "The current value of a future sum of money or stream of cash flows, given a specified rate of return."}, {"t": "Present Worth", "d": "The value of an asset in today's dollars. For this course PW, NPW, PV (P), and NPV are equivalent — though the Excel functions PV and NPV are notably different."}, {"t": "Present Worth Analysis", "d": "Comparing alternatives stated in terms of equivalent present worth."}, {"t": "Principal Payment", "d": "A payment toward the amount of principal owed. Loan payments often include both a principal payment and an interest payment."}, {"t": "Probability", "d": "A measure quantifying the likelihood that an event will occur, from 0 to 1 (0% to 100%)."}, {"t": "Probability Distribution", "d": "A function describing the likelihood of obtaining the possible values that a random variable can assume."}, {"t": "Profit", "d": "The net effect of all benefits minus all costs. Positive is a profit; negative is a loss."}, {"t": "Profitability", "d": "A relative measure of a company's ability to produce a financial gain in relation to the size of the business."}, {"t": "Profit Margin", "d": "A ratio reflecting profitability: Profit Margin = (Net Income / Total Revenue) × 100."}, {"t": "PY (Prior Year)", "d": "An abbreviation used in income statements and financial spreadsheets to indicate values from the previous year."}, {"t": "Quick Assets", "d": "The highly liquid portion of current assets that are cash or quickly convertible to cash without measurable loss (cash, cash equivalents, marketable securities, current AR). = Current Assets − inventory − prepaid expenses − other not-quickly-convertible items."}, {"t": "Quick Ratio", "d": "The ratio of Quick Assets to Current Liabilities: Quick Ratio = Quick Assets / Current Liabilities."}, {"t": "Range of Estimates", "d": "The difference between the lowest and the highest values."}, {"t": "Recurring Costs", "d": "Typical expenses that are ongoing and regular during normal business operations."}, {"t": "Replacement Value", "d": "The amount an entity would have to pay to replace an asset at a given time."}, {"t": "Retained Earnings", "d": "The cumulative profit a company has earned to date, minus any dividends or distributions paid to investors."}, {"t": "Risk", "d": "A form of uncertainty: the actual outcome is unknown, but realistic probabilities can be assigned to each possible outcome."}, {"t": "Salvage Value", "d": "The value a company expects to receive for a capital asset at the end of its useful life."}, {"t": "Sensitivity Analysis", "d": "Analysis of how predictions change with variations in inputs and assumptions — often used to find how much an input can change before a different alternative is preferred."}, {"t": "SG&A", "d": "Sales, General & Administrative — a category of overhead operating expenses on the income statement covering non-production costs (sales and marketing, salaries, general overhead)."}, {"t": "Solvency", "d": "A measure of a company's ability to pay off its long-term debts and financial obligations, including associated interest."}, {"t": "Statement of Cash Flows", "d": "A standard financial report summarizing cash (and cash equivalents) flowing in and out of a company across a given period."}, {"t": "Sunk Costs", "d": "A cost that has already occurred and cannot be recovered. Sunk costs should not be considered during economic analysis."}, {"t": "Tangible Assets", "d": "An asset with a quantifiable, finite monetary value — typically physical in form."}, {"t": "Tangible Benefits", "d": "Benefits that can be quantified and measured, typically in money (income, profit, savings)."}, {"t": "Terminal Value", "d": "The value a company expects to receive for a capital asset at the end of its use by the company, but before the end of its useful life."}, {"t": "Time Value of Money", "d": "The value of money adjusted for differences in time, based on an assumed interest rate. Typically a present sum is worth more than the same sum at a future date."}, {"t": "Transaction", "d": "An event involving two parties and the exchange of money (or a promise of money), typically for a product or service."}, {"t": "Turnover", "d": "Can mean: the total sales revenue for a given period (usually a year); the rate at which employees leave and are replaced; or inventory turns (see Inventory Turnover)."}, {"t": "Unearned Revenue", "d": "A liability arising from money received from customers for work not yet performed or a product not yet delivered."}, {"t": "Variable Costs", "d": "Business costs that vary depending on the number of units produced."}, {"t": "Weighted Average Cost of Capital (WACC)", "d": "A company's cost of capital weighting debt and equity proportionately: WACC = (E/V)×Re + (D/V)×Rd×(1−Tc), where E=equity, D=debt, V=E+D, Re=cost of equity, Rd=cost of debt, Tc=tax rate."}, {"t": "Working Capital", "d": "Current Assets − Current Liabilities. The capital not tied up in land, buildings, or fixed equipment and not committed to current liabilities."}, {"t": "YOY (Year-Over-Year)", "d": "A comparison to the previous year. As a value: YOY = current-year value − prior-year value. As a percent: YOY% = YOY value / prior-year value."}];
-const XLSX_FILE = "econ_glossary.xlsx";   // keep this next to the .html in your repo
-const STORE_KEY = "enmgt_econ_mastered_v1";
+/* ---------- data ---------- */
+const FALLBACK = [{"t": "Absorption Costing", "d": "A cost accounting method that allocates fixed overhead costs to each unit produced in the relevant period.", "c": "Costs & Cost Behavior"}, {"t": "Accounting", "d": "The act or process of keeping records and financial accounts of all transactions.", "c": "Accounting & Statements"}, {"t": "Accounts Receivable (AR / A/R)", "d": "Money owed to a company by its debtors. Typically the money due from customers for products shipped or services rendered but not yet paid for.", "c": "Accounting & Statements"}, {"t": "Accounts Payable (AP / A/P)", "d": "Money a company owes to others, excluding shareholders or owners — e.g. money owed to vendors for parts and services received but not yet paid for.", "c": "Accounting & Statements"}, {"t": "Accrued", "d": "An amount accumulated over a period of time.", "c": "Accounting & Statements"}, {"t": "Accrued Interest", "d": "Interest that has accumulated since the principal investment, or since the previous compounding period.", "c": "Interest & Loans"}, {"t": "Activity-Based Costing", "d": "A costing method that identifies activities in an organization and assigns the cost of each activity to all products and services according to the actual consumption by each.", "c": "Costs & Cost Behavior"}, {"t": "Amortization", "d": "The spreading out of payments over a period of time.", "c": "Interest & Loans"}, {"t": "Amortization of Loans", "d": "The process of spreading out a loan into a series of (usually fixed) payments over time, as shown in an amortization schedule.", "c": "Interest & Loans"}, {"t": "Amortization of Assets", "d": "The allocation of the cost of intangible assets (e.g. patents) over their economic useful life, represented within expenses on the Income Statement.", "c": "Depreciation & Asset Value"}, {"t": "Allocated Cost", "d": "A cost that has been assigned to a specific cost object such as a product line, department, business unit, or program (e.g. assigning plant overhead to product lines).", "c": "Costs & Cost Behavior"}, {"t": "Amortization Schedule", "d": "A schedule that lists, for each payment period: the loan payment, interest paid, principal paid, and remaining balance.", "c": "Interest & Loans"}, {"t": "Analysis Period / Planning Horizon / Project Life", "d": "The time period considered for a present worth analysis — usually the time needed to accomplish the task and/or the life of the project.", "c": "Analysis Methods"}, {"t": "Annual Cost", "d": "The cost per year of owning and operating an asset over its entire lifespan.", "c": "Analysis Methods"}, {"t": "Annuity Due", "d": "Uniform cash flows that occur at the beginning of each period — e.g. lease, rent, insurance, and tuition payments.", "c": "Time Value of Money"}, {"t": "Assets", "d": "Property owned by a company that has a quantified value.", "c": "Accounting & Statements"}, {"t": "Average Cost", "d": "The total cost divided by the number of units produced.", "c": "Costs & Cost Behavior"}, {"t": "Balance Sheet", "d": "A standard financial report that summarizes all Assets, Liabilities, and Equity of a company as of a given date — a snapshot at a point in time.", "c": "Accounting & Statements"}, {"t": "Benefits", "d": "Advantages gained as a result of a decision, action, or event — an increase in something positive (cash, morale) or a decrease in something negative (costs, risks).", "c": "Core Concepts"}, {"t": "Benefit-Cost Ratio", "d": "$\\frac{\\text{PW of benefits}}{\\text{PW of costs}}$.", "c": "Analysis Methods"}, {"t": "Beta Distribution", "d": "A probability distribution. A common simple form used in economic analysis: $\\text{mean} = \\frac{\\text{optimistic} + 4 \\times \\text{most likely} + \\text{pessimistic}}{6}$.", "c": "Risk & Probability"}, {"t": "Book Cost", "d": "A cost reflected in the records and statements of a company that does not directly reflect actual cash payments.", "c": "Costs & Cost Behavior"}, {"t": "Break-Even Point", "d": "The point at which total costs equal total benefits, so profit is zero. May be expressed as a sales dollar amount, a sales volume, or a period of time (e.g. 15,000 units ≈ 9 months of sales).", "c": "Analysis Methods"}, {"t": "Break-Even Analysis", "d": "A form of sensitivity analysis, often presented as a break-even chart.", "c": "Analysis Methods"}, {"t": "Capital Recovery Cost", "d": "The equivalent uniform annual cost of the net capital expenditure, including both initial costs and salvage values (if any).", "c": "Analysis Methods"}, {"t": "Capitalized Cost", "d": "The present worth of cost when the analysis has an infinite analysis period.", "c": "Analysis Methods"}, {"t": "Cash Disbursement", "d": "Also called cash payments; payments made by a company during a specified period such as a quarter or year.", "c": "Accounting & Statements"}, {"t": "Cash Flow Diagram", "d": "A visual representation of cash flows in and out over a number of time periods.", "c": "Time Value of Money"}, {"t": "Cash Receipts", "d": "Money received by a company during a specified period such as a quarter or year.", "c": "Accounting & Statements"}, {"t": "Cash Equivalents", "d": "Short-term liquid investments that can readily be converted to cash in a short period without significant risk to their relative value.", "c": "Assets & Liquidity"}, {"t": "Compound Interest", "d": "Interest on a deposit or loan that itself earns interest in later periods.", "c": "Interest & Loans"}, {"t": "Contribution Margin", "d": "The amount a unit sale contributes to profit.", "c": "Costs & Cost Behavior"}, {"t": "Cost", "d": "An outlay, expenditure, or anything given up in order to obtain or accomplish something.", "c": "Costs & Cost Behavior"}, {"t": "Cost Indexing", "d": "A method of using historical changes in costs to scale cost estimates. $\\text{Cost}_B = \\text{Cost}_A \\times \\frac{\\text{Index}_B}{\\text{Index}_A}$.", "c": "Cost Estimating"}, {"t": "Per-Unit Model", "d": "A cost-estimating model in which a cost estimate is made for a single unit; $\\text{total cost} = X \\times \\text{cost per unit}$.", "c": "Cost Estimating"}, {"t": "Power-Sizing Model", "d": "A cost-estimating model that explicitly accounts for economies of scale by using a power-sizing factor or exponent.", "c": "Cost Estimating"}, {"t": "Learning-Curve Cost Estimating", "d": "Based on the assumption that as a task is repeated the operator systematically becomes quicker (and other barriers to peak efficiency reduce over time).", "c": "Cost Estimating"}, {"t": "Cost of Capital", "d": "The internal rate of return needed to make a capital project worthwhile — typically a weighted average cost of capital (WACC), unless financed solely through equity or solely through debt.", "c": "Interest & Loans"}, {"t": "Current Assets", "d": "Assets expected to convert to cash within the next 12 months through normal operations (e.g. cash, accounts receivable, inventories).", "c": "Assets & Liquidity"}, {"t": "Current Cost", "d": "The economic value of resources used or required now, regardless of how they appear in accounting statements.", "c": "Costs & Cost Behavior"}, {"t": "Current Expense", "d": "An operating cost recognized in the present accounting period, typically tied to activities within the current fiscal year.", "c": "Accounting & Statements"}, {"t": "Current Liabilities", "d": "Liabilities due within the next 12 months (e.g. accounts payable).", "c": "Accounting & Statements"}, {"t": "Current Ratio", "d": "A liquidity ratio measuring ability to pay short-term obligations. $\\text{Current Ratio} = \\frac{\\text{Current Assets}}{\\text{Current Liabilities}}$. ~1.5\\u20133.0 is often healthy; below 1.5 may signal trouble paying liabilities.", "c": "Ratios & Financial Health"}, {"t": "Debt-to-Equity Ratio (D/E)", "d": "A measure of financial leverage: the degree to which a company finances operations using debt versus wholly-owned funds. $\\text{D/E} = \\frac{\\text{Total Liabilities}}{\\text{Shareholder Equity}}$.", "c": "Ratios & Financial Health"}, {"t": "Decision Tree", "d": "A decision-support tool using a tree-like graph of decisions and their possible consequences, including chance outcomes, resource costs, and utility.", "c": "Risk & Probability"}, {"t": "Decision Tree Nodes", "d": "Chance node = a probabilistic event (each outcome has a probability). Decision node = the decision-maker chooses one available path. Outcome node = shows the result for a particular path.", "c": "Risk & Probability"}, {"t": "Depletion", "d": "An accrual accounting technique used to allocate the cost of extracting natural resources such as timber, minerals, and oil from the earth.", "c": "Depreciation & Asset Value"}, {"t": "Depreciation", "d": "A reduction of value over time. In accounting: allocation of a tangible asset's cost to expense periods over its useful life (set by a depreciation schedule). In economic analysis: the decrease in an asset's market value, which may be non-uniform.", "c": "Depreciation & Asset Value"}, {"t": "Direct Costs", "d": "Costs from activities that can be directly associated with the final product or service (e.g. direct material, direct labor).", "c": "Costs & Cost Behavior"}, {"t": "Discounted Cash Flow (DCF)", "d": "The analysis of cash flow that adjusts for the time value of money.", "c": "Time Value of Money"}, {"t": "Discount Rate", "d": "The interest rate used in financial analyses to convert future sums to a present value (or vice versa).", "c": "Time Value of Money"}, {"t": "Dollar-Years", "d": "A measure of how long and how much money is tied up — the economic footprint of capital over time. The area under the value-versus-time curve (dollars on the vertical axis, years on the horizontal).", "c": "Time Value of Money"}, {"t": "Economics", "d": "The study of how people and organizations make choices about using limited resources to produce, distribute, and consume goods and services.", "c": "Core Concepts"}, {"t": "Economic Value", "d": "The worth of a resource, action, or outcome based on its expected benefits, alternatives, and opportunity cost — not simply its purchase price or accounting value.", "c": "Core Concepts"}, {"t": "End-of-Year Convention", "d": "Treating cash flows as if they occur at the end of a year.", "c": "Time Value of Money"}, {"t": "Engineering Economics", "d": "The application of economic principles and quantitative analysis to evaluate engineering alternatives and support decisions about projects, systems, and investments over time.", "c": "Core Concepts"}, {"t": "Rough Estimate", "d": "Order-of-magnitude, back-of-the-envelope estimate with limited detail or accuracy; used for high-level planning, feasibility, and a project's initial planning phases.", "c": "Cost Estimating"}, {"t": "Semi-Detailed Estimate", "d": "A more detailed estimate used for budgeting at a project's conceptual or preliminary design stages.", "c": "Cost Estimating"}, {"t": "Detailed Estimate", "d": "An estimate made from detailed quantitative models, blueprints, spec sheets, and vendor quotes; used during detailed design and contract bidding.", "c": "Cost Estimating"}, {"t": "Equity", "d": "The difference between the value of an asset and the liabilities associated with it. Shareholder equity = Assets − Liabilities; the amount left for owners if all assets were liquidated and liabilities paid.", "c": "Accounting & Statements"}, {"t": "Equivalency", "d": "The relative equality between differing cash flows based on the time value of money.", "c": "Time Value of Money"}, {"t": "Exact Economic Analysis Methods", "d": "The four exact methods: Present Worth analysis, Annual Cash Flow analysis, Rate of Return analysis, and Benefit-Cost ratio analysis.", "c": "Analysis Methods"}, {"t": "Expected Value", "d": "The probability-weighted average of all possible values.", "c": "Risk & Probability"}, {"t": "External Costs", "d": "Costs external to the company — hard to estimate and typically not used in pricing or business analysis (e.g. end-of-life disposal, environmental effects, health impacts, social costs).", "c": "Costs & Cost Behavior"}, {"t": "Factory Overhead", "d": "Also Manufacturing Overhead or Factory Burden: indirect costs incurred when a product is produced. Allocated to production and included within COGS.", "c": "Costs & Cost Behavior"}, {"t": "Finance", "d": "The study and management of money over time — how funds are raised, invested, and allocated to create value while managing risk; also how assets are valued and how the cost of capital influences decisions.", "c": "Core Concepts"}, {"t": "Financial Statements", "d": "Standard statements companies report to summarize current status and changes over a period: the Balance Sheet, the Income Statement, and the Statement of Cash Flows (sometimes a fourth — the Statement of Shareholder Equity).", "c": "Accounting & Statements"}, {"t": "Fixed Asset", "d": "Tangible assets NOT expected to convert to cash within the next 12 months through normal operations (e.g. buildings, equipment, PP&E).", "c": "Assets & Liquidity"}, {"t": "Fixed Costs", "d": "Business costs that are fixed regardless of production volume; they must be paid regardless of output. Usually treated as operating expenses (insurance, SG&A, salaries, most utilities), though some — like factory overhead — may sit in COGS.", "c": "Costs & Cost Behavior"}, {"t": "Fundamental Accounting Equation", "d": "$\\text{Assets} = \\text{Liabilities} + \\text{Equity}$.", "c": "Accounting & Statements"}, {"t": "Future Value / Future Worth", "d": "The value of an asset at a specified future date, based on an assumed rate of growth.", "c": "Time Value of Money"}, {"t": "Goodwill", "d": "An intangible asset arising when an existing business is purchased above the fair value of its quantifiable assets minus liabilities (e.g. brand name, customer base, patents, trade secrets).", "c": "Assets & Liquidity"}, {"t": "Graphical Approach", "d": "Using graphs to find, interpret, or represent the results of several alternatives.", "c": "Analysis Methods"}, {"t": "Income Statement", "d": "A standard financial report summarizing Income, COGS, Gross Profit, and Operating expenses for a period, resulting in Net Profit or Net Loss. Also called the Profit & Loss (P&L) statement.", "c": "Accounting & Statements"}, {"t": "Indirect Costs", "d": "Costs from activities that CANNOT be directly associated with the final product or service (e.g. insurance, most utilities, SG&A, R&D).", "c": "Costs & Cost Behavior"}, {"t": "Incremental Cost", "d": "The difference in the cost of one alternative compared to the cost of another alternative.", "c": "Costs & Cost Behavior"}, {"t": "Incremental Rate of Return", "d": "An analysis of financial return where two competing investments require different amounts; applied to the difference between the costs of the two investments.", "c": "Analysis Methods"}, {"t": "Intangible Assets", "d": "Non-physical assets with a useful life greater than one year (e.g. trademarks, patents, customer lists, goodwill).", "c": "Assets & Liquidity"}, {"t": "Intangible Benefits", "d": "Benefits that cannot be quantified and measured in terms of money (e.g. reputation, morale, goodwill).", "c": "Core Concepts"}, {"t": "Intangible Costs", "d": "Costs difficult or impossible to quantify and/or to allocate accurately to a source (e.g. lower employee morale, customer dissatisfaction, brand damage). May be internal or external.", "c": "Costs & Cost Behavior"}, {"t": "Internal Costs", "d": "Costs internal to the company that can typically be estimated and measured for pricing or profitability (e.g. materials, parts, labor, equipment, overhead).", "c": "Costs & Cost Behavior"}, {"t": "Internal Rate of Return (IRR)", "d": "A measure of an alternative's profitability — the discount rate at which NPV = 0 (PW = 0 = EUAW). On a loan, the interest rate on the unpaid balance; on an investment, the rate earned on the un-recovered investment.", "c": "Analysis Methods"}, {"t": "Interest Payment", "d": "A payment determined by the interest rate and the remaining principal owed. Loan payments often include both a principal payment and an interest payment.", "c": "Interest & Loans"}, {"t": "Interest Rate", "d": "The charge made for the loan of financial capital, expressed as a proportion of the loan.", "c": "Interest & Loans"}, {"t": "Nominal Interest Rate", "d": "The annual interest rate without considering the effect of any compounding.", "c": "Interest & Loans"}, {"t": "Effective Interest Rate", "d": "The annual interest rate taking into account the effect of any compounding during the year.", "c": "Interest & Loans"}, {"t": "Annual Percentage Rate (APR)", "d": "The rate of interest that equates the present discounted value of funds received to the present discounted value of payments made.", "c": "Interest & Loans"}, {"t": "Annual Percentage Yield (APY)", "d": "The effective interest rate earned on savings accounts, certificates of deposit, and bonds.", "c": "Interest & Loans"}, {"t": "Inventory", "d": "Merchandise, raw materials, and work in process a company has on hand that is available for sale or will be used to produce items for sale.", "c": "Assets & Liquidity"}, {"t": "Inventory Turnover (Inventory Turns)", "d": "A ratio of how effectively a company turns money tied up in inventory into cash: $\\frac{\\text{COGS}}{\\text{Average Total Inventory}}$ (sometimes $\\frac{\\text{Total Sales Revenue}}{\\text{Average Total Inventory}}$). How many times inventory is sold and replaced per period.", "c": "Ratios & Financial Health"}, {"t": "JIT (Just-In-Time)", "d": "An inventory management strategy that closely aligns delivery of inventory with the production schedule to reduce inventory levels and increase efficiency.", "c": "Core Concepts"}, {"t": "KPI (Key Performance Indicator)", "d": "A measurable variable indicating how effectively a company, department, or team manages, maintains, or improves a metric aligned with business objectives.", "c": "Core Concepts"}, {"t": "Liquidity", "d": "A measure of how quickly an asset can be converted to cash (or another asset) without risk of loss to its intrinsic value. Cash is the most liquid; a building or rare antique is highly illiquid.", "c": "Assets & Liquidity"}, {"t": "Liabilities", "d": "What a company owes to others besides its owners — financial, legal, or material debts arising during business that the company is obligated to fulfill.", "c": "Accounting & Statements"}, {"t": "Life-Cycle Cost", "d": "All costs over the entire life of a product, structure, system, or service.", "c": "Costs & Cost Behavior"}, {"t": "Marginal Cost", "d": "The cost associated with producing one more (the next) unit. A marginal cost is a form of incremental cost, but incremental cost applies to a much wider variety of comparisons — the terms are not broadly equivalent.", "c": "Costs & Cost Behavior"}, {"t": "MARR (Minimum Acceptable Rate of Return)", "d": "The minimum rate of return on a project a company is willing to accept before starting it, given its risk and the opportunity cost of forgoing other projects.", "c": "Analysis Methods"}, {"t": "Monte Carlo Simulation", "d": "A technique to understand the impact of risk and uncertainty in financial, project, cost, and other forecasting models by visualizing most or all potential outcomes.", "c": "Risk & Probability"}, {"t": "Net Present Worth (NPW)", "d": "PW of benefits − PW of costs. Same as Present Worth (PW) or Present Value (PV); the 'Net' prefix simply reminds that both benefits and costs are included.", "c": "Analysis Methods"}, {"t": "Non-Recurring Costs", "d": "Extraordinary and/or one-time expenses not expected to recur (e.g. certain legal fees, acquisition costs, purchasing a new building, severance packages).", "c": "Costs & Cost Behavior"}, {"t": "Opportunity Cost", "d": "The benefits foregone when one alternative is chosen over another — the loss of potential gains from the option not selected.", "c": "Costs & Cost Behavior"}, {"t": "Owner's Equity", "d": "The portion of a company's assets that owners have a claim to. Equity is one of two sources of funds for assets, the other being liabilities (debt).", "c": "Accounting & Statements"}, {"t": "Overhead", "d": "Ongoing business expenses not directly attributed to producing a product or service.", "c": "Costs & Cost Behavior"}, {"t": "Payback Period", "d": "The time required for a project's gains or benefits to equal its cost; usually measured in months.", "c": "Analysis Methods"}, {"t": "P&L (Profit and Loss Statement)", "d": "Another name for the Income Statement.", "c": "Accounting & Statements"}, {"t": "Prepaid (Prepaid Expense)", "d": "An expense paid for an asset in one period for use in a future period (e.g. prepaid leases, down payments, insurance). Shown as an asset on the balance sheet; the recipient shows it as unearned revenue (a liability).", "c": "Accounting & Statements"}, {"t": "Present Value", "d": "The current value of a future sum of money or stream of cash flows, given a specified rate of return.", "c": "Time Value of Money"}, {"t": "Present Worth", "d": "The value of an asset in today's dollars. For this course PW, NPW, PV (P), and NPV are equivalent — though the Excel functions PV and NPV are notably different.", "c": "Time Value of Money"}, {"t": "Present Worth Analysis", "d": "Comparing alternatives stated in terms of equivalent present worth.", "c": "Analysis Methods"}, {"t": "Principal Payment", "d": "A payment toward the amount of principal owed. Loan payments often include both a principal payment and an interest payment.", "c": "Interest & Loans"}, {"t": "Probability", "d": "A measure quantifying the likelihood that an event will occur, from 0 to 1 (0% to 100%).", "c": "Risk & Probability"}, {"t": "Probability Distribution", "d": "A function describing the likelihood of obtaining the possible values that a random variable can assume.", "c": "Risk & Probability"}, {"t": "Profit", "d": "The net effect of all benefits minus all costs. Positive is a profit; negative is a loss.", "c": "Core Concepts"}, {"t": "Profitability", "d": "A relative measure of a company's ability to produce a financial gain in relation to the size of the business.", "c": "Ratios & Financial Health"}, {"t": "Profit Margin", "d": "A ratio reflecting profitability: $\\text{Profit Margin} = \\frac{\\text{Net Income}}{\\text{Total Revenue}} \\times 100$.", "c": "Ratios & Financial Health"}, {"t": "PY (Prior Year)", "d": "An abbreviation used in income statements and financial spreadsheets to indicate values from the previous year.", "c": "Accounting & Statements"}, {"t": "Quick Assets", "d": "The highly liquid portion of current assets that are cash or quickly convertible to cash without measurable loss (cash, cash equivalents, marketable securities, current AR). = Current Assets − inventory − prepaid expenses − other not-quickly-convertible items.", "c": "Assets & Liquidity"}, {"t": "Quick Ratio", "d": "The ratio of Quick Assets to Current Liabilities: $\\text{Quick Ratio} = \\frac{\\text{Quick Assets}}{\\text{Current Liabilities}}$.", "c": "Ratios & Financial Health"}, {"t": "Range of Estimates", "d": "The difference between the lowest and the highest values.", "c": "Cost Estimating"}, {"t": "Recurring Costs", "d": "Typical expenses that are ongoing and regular during normal business operations.", "c": "Costs & Cost Behavior"}, {"t": "Replacement Value", "d": "The amount an entity would have to pay to replace an asset at a given time.", "c": "Depreciation & Asset Value"}, {"t": "Retained Earnings", "d": "The cumulative profit a company has earned to date, minus any dividends or distributions paid to investors.", "c": "Accounting & Statements"}, {"t": "Risk", "d": "A form of uncertainty: the actual outcome is unknown, but realistic probabilities can be assigned to each possible outcome.", "c": "Risk & Probability"}, {"t": "Salvage Value", "d": "The value a company expects to receive for a capital asset at the end of its useful life.", "c": "Depreciation & Asset Value"}, {"t": "Sensitivity Analysis", "d": "Analysis of how predictions change with variations in inputs and assumptions — often used to find how much an input can change before a different alternative is preferred.", "c": "Analysis Methods"}, {"t": "SG&A", "d": "Sales, General & Administrative — a category of overhead operating expenses on the income statement covering non-production costs (sales and marketing, salaries, general overhead).", "c": "Costs & Cost Behavior"}, {"t": "Solvency", "d": "A measure of a company's ability to pay off its long-term debts and financial obligations, including associated interest.", "c": "Ratios & Financial Health"}, {"t": "Statement of Cash Flows", "d": "A standard financial report summarizing cash (and cash equivalents) flowing in and out of a company across a given period.", "c": "Accounting & Statements"}, {"t": "Sunk Costs", "d": "A cost that has already occurred and cannot be recovered. Sunk costs should not be considered during economic analysis.", "c": "Costs & Cost Behavior"}, {"t": "Tangible Assets", "d": "An asset with a quantifiable, finite monetary value — typically physical in form.", "c": "Assets & Liquidity"}, {"t": "Tangible Benefits", "d": "Benefits that can be quantified and measured, typically in money (income, profit, savings).", "c": "Core Concepts"}, {"t": "Terminal Value", "d": "The value a company expects to receive for a capital asset at the end of its use by the company, but before the end of its useful life.", "c": "Depreciation & Asset Value"}, {"t": "Time Value of Money", "d": "The value of money adjusted for differences in time, based on an assumed interest rate. Typically a present sum is worth more than the same sum at a future date.", "c": "Time Value of Money"}, {"t": "Transaction", "d": "An event involving two parties and the exchange of money (or a promise of money), typically for a product or service.", "c": "Core Concepts"}, {"t": "Turnover", "d": "Can mean: the total sales revenue for a given period (usually a year); the rate at which employees leave and are replaced; or inventory turns (see Inventory Turnover).", "c": "Ratios & Financial Health"}, {"t": "Unearned Revenue", "d": "A liability arising from money received from customers for work not yet performed or a product not yet delivered.", "c": "Accounting & Statements"}, {"t": "Variable Costs", "d": "Business costs that vary depending on the number of units produced.", "c": "Costs & Cost Behavior"}, {"t": "Weighted Average Cost of Capital (WACC)", "d": "A company's cost of capital weighting debt and equity proportionately: $\\text{WACC} = \\frac{E}{V} R_e + \\frac{D}{V} R_d (1 - T_c)$, where E=equity, D=debt, V=E+D, Re=cost of equity, Rd=cost of debt, Tc=tax rate.", "c": "Interest & Loans"}, {"t": "Working Capital", "d": "$\\text{Current Assets} - \\text{Current Liabilities}$. The capital not tied up in land, buildings, or fixed equipment and not committed to current liabilities.", "c": "Assets & Liquidity"}, {"t": "YOY (Year-Over-Year)", "d": "A comparison to the previous year. As a value: $\\text{YOY} = \\text{current-year value} - \\text{prior-year value}$. As a percent: $\\text{YOY\\%} = \\frac{\\text{YOY value}}{\\text{prior-year value}}$.", "c": "Accounting & Statements"}];
+const XLSX_FILE = "econ_glossary.xlsx";
+const STATE_KEY = "enmgt5940_srs_v1";
+const META_KEY  = "enmgt5940_meta_v1";
+const OLD_KEY   = "enmgt_econ_mastered_v1";
+const DAY = 86400000;
+const MASTER_DAYS = 7;      // interval at which a card counts as "mastered"
 
 const $ = id => document.getElementById(id);
 const card = $("card");
 
 let ALL = FALLBACK.slice();
-let known = loadKnown();
-let mode = "study";
-let queue = [];
-let pool = ALL.slice();
-let struggled = new Set();
-let flipped = false;
-let bi = 0;
+let state = load(STATE_KEY, {});
+let meta  = Object.assign({streak:0, lastDate:null, theme:"light"}, load(META_KEY, {}));
+let mode = "study", style = "flip", cat = "__all";
+let pool = [], queue = [], cur = null, flipped = false, bi = 0, answered = false;
+let session = null, redraw = ()=>{};
 
-function loadKnown(){ try{ return new Set(JSON.parse(localStorage.getItem(STORE_KEY)||"[]")); }catch(e){ return new Set(); } }
-function saveKnown(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify([...known])); }catch(e){} }
+function load(k, d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d; }catch(e){ return d; } }
+function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function saveState(){ save(STATE_KEY, state); }
+function saveMeta(){ save(META_KEY, meta); }
 
-/* Load terms from the Excel file; silently keep FALLBACK on any failure. */
-async function loadFromXlsx(){
-  try{
-    if(typeof XLSX === "undefined") return;
-    const res = await fetch(XLSX_FILE, {cache:"no-store"});
-    if(!res.ok) return;
-    const buf = await res.arrayBuffer();
-    const wb = XLSX.read(buf, {type:"array"});
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, {defval:""});
-    const parsed = rows.map(r=>{
-      const keys = Object.keys(r);
-      const tk = keys.find(k=>String(k).trim().toLowerCase()==="term");
-      const dk = keys.find(k=>String(k).trim().toLowerCase()==="definition");
-      return {t:String(tk?r[tk]:"").trim(), d:String(dk?r[dk]:"").trim()};
-    }).filter(c=>c.t && c.d);
-    if(parsed.length) ALL = parsed;
-  }catch(e){ /* keep FALLBACK */ }
+/* ---------- spaced repetition (SM-2-ish) ---------- */
+function defState(){ return {ease:2.5, interval:0, due:0, reps:0, lapses:0, seen:0, wrong:0, starred:false}; }
+function st(t){ if(!state[t]) state[t] = defState(); return state[t]; }
+function endOfToday(){ const d=new Date(); d.setHours(23,59,59,999); return d.getTime(); }
+function isDue(t){ const s=state[t]; return !s || s.due <= endOfToday(); }
+function isMastered(t){ const s=state[t]; return !!s && s.interval >= MASTER_DAYS; }
+
+function schedule(t, pass, easy){
+  const s = st(t); s.seen++;
+  if(!pass){ s.reps=0; s.lapses++; s.wrong++; s.ease=Math.max(1.3, s.ease-0.2); s.interval=1; }
+  else{
+    s.reps++;
+    if(easy) s.ease=Math.min(3.0, s.ease+0.15);
+    if(s.reps===1) s.interval = easy?3:1;
+    else if(s.reps===2) s.interval = easy?7:3;
+    else s.interval = Math.round(s.interval * s.ease * (easy?1.3:1));
+  }
+  s.due = Date.now() + s.interval*DAY;
+  saveState();
+}
+function migrate(){
+  const old = load(OLD_KEY, []);
+  if(Array.isArray(old) && old.length && Object.keys(state).length===0){
+    old.forEach(t=>{ const s=st(t); s.reps=2; s.interval=4; s.due=Date.now()+4*DAY; });
+    saveState();
+  }
 }
 
+/* ---------- streak ---------- */
+function dstr(d){ return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+function bumpStreak(){
+  const today = dstr(new Date());
+  if(meta.lastDate === today) return;
+  const y = new Date(); y.setDate(y.getDate()-1);
+  meta.streak = (meta.lastDate === dstr(y)) ? meta.streak+1 : 1;
+  meta.lastDate = today; saveMeta();
+}
+
+/* ---------- categories + pool ---------- */
+function catCounts(){ const m=new Map(); ALL.forEach(c=>{ if(c.c) m.set(c.c,(m.get(c.c)||0)+1); }); return m; }
+function starredCount(){ return ALL.filter(c=>st(c.t).starred).length; }
+function computePool(){
+  let p = ALL.slice();
+  if(cat==="__starred") p = p.filter(c=>st(c.t).starred);
+  else if(cat!=="__all") p = p.filter(c=>c.c===cat);
+  const q = ($("search").value||"").trim().toLowerCase();
+  if(q) p = p.filter(c=>(c.t+" "+c.d).toLowerCase().includes(q));
+  return p;
+}
+
+/* ---------- math rendering ---------- */
+function renderText(el, text){
+  el.textContent = text;
+  if(window.renderMathInElement){
+    try{ renderMathInElement(el, {delimiters:[{left:"$",right:"$",display:false}], throwOnError:false}); }
+    catch(e){}
+  }else if(text.indexOf("$")>=0){
+    el.textContent = stripLatex(text);
+  }
+}
+function stripLatex(s){
+  return s.replace(/\$/g,"")
+    .replace(/\\text\{([^{}]*)\}/g,"$1")
+    .replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g,"($1) / ($2)")
+    .replace(/\\times/g,"\u00d7").replace(/\\%/g,"%")
+    .replace(/([A-Za-z])_\{?([A-Za-z0-9]+)\}?/g,"$1$2")
+    .replace(/[{}]/g,"").replace(/\\[a-zA-Z]+/g,"")
+    .replace(/\s+/g," ").trim();
+}
+
+/* ---------- helpers ---------- */
 function shuffle(a){ for(let k=a.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[a[k],a[j]]=[a[j],a[k]];} return a; }
+function hideAll(){ ["card","quiz","summary","empty"].forEach(id=>$(id).classList.add("hidden"));
+  ["rateRow","navRow","qactRow"].forEach(id=>$(id).classList.add("hidden")); }
+function setStar(){ const on = cur && st(cur.t).starred; $("starF").classList.toggle("on", !!on);
+  $("starF").innerHTML = on ? "&#9733;" : "&#9734;"; }
+
+/* ---------- flip card ---------- */
 function setFace(c){
-  card.classList.add("instant");
-  flipped=false; card.classList.remove("flip");
-  card.classList.toggle("known", known.has(c.t));
-  $("front").textContent=c.t; $("back").textContent=c.d;
-  void card.offsetWidth;
-  requestAnimationFrame(()=>card.classList.remove("instant"));
+  card.classList.add("instant"); flipped=false; card.classList.remove("flip");
+  $("front").textContent = c.t;
+  $("fcat").textContent = c.c || "";
+  renderText($("back"), c.d);
+  setStar();
+  void card.offsetWidth; requestAnimationFrame(()=>card.classList.remove("instant"));
 }
-function flip(){
-  flipped=!flipped; card.classList.toggle("flip",flipped);
-  if(mode==="study") $("rateRow").classList.toggle("locked", !flipped);
+function flip(){ flipped=!flipped; card.classList.toggle("flip",flipped);
+  if(mode==="study" && style==="flip") $("rateRow").classList.toggle("locked", !flipped); }
+
+/* ---------- presenters ---------- */
+function presentFlip(c){ hideAll(); cur=c; $("card").classList.remove("hidden");
+  $("rateRow").classList.remove("hidden"); $("rateRow").classList.add("locked"); setFace(c);
+  redraw=()=>presentFlip(c); }
+function presentBrowse(c){ hideAll(); cur=c; $("card").classList.remove("hidden");
+  $("navRow").classList.remove("hidden"); setFace(c);
+  $("counter").textContent=(bi+1)+" / "+pool.length; redraw=()=>presentBrowse(c); }
+function presentType(c){ hideAll(); cur=c; answered=false;
+  $("quiz").classList.remove("hidden"); $("qactRow").classList.remove("hidden");
+  $("qtag").textContent="Type the term"; renderText($("qprompt"), c.d);
+  $("qchoices").classList.add("hidden"); $("qresult").classList.add("hidden");
+  const inp=$("qinput"); inp.classList.remove("hidden"); inp.value=""; inp.disabled=false;
+  $("qSubmit").textContent="Check"; setTimeout(()=>inp.focus(),30); redraw=()=>presentType(c); }
+function presentChoice(c){ hideAll(); cur=c; answered=false;
+  $("quiz").classList.remove("hidden");
+  $("qtag").textContent="Pick the term"; renderText($("qprompt"), c.d);
+  $("qinput").classList.add("hidden"); $("qactRow").classList.add("hidden");
+  $("qresult").classList.add("hidden");
+  const box=$("qchoices"); box.classList.remove("hidden"); box.innerHTML="";
+  const opts=shuffle([c.t, ...distractors(c)]);
+  opts.forEach(term=>{
+    const b=document.createElement("button"); b.className="choice"; b.textContent=term;
+    b.onclick=()=>pickChoice(b, term, c); box.appendChild(b);
+  });
+  redraw=()=>presentChoice(c); }
+
+function distractors(c){
+  const same=ALL.filter(x=>x.t!==c.t && x.c===c.c);
+  const src=(same.length>=3?same:ALL.filter(x=>x.t!==c.t));
+  return shuffle(src.slice()).slice(0,3).map(x=>x.t);
 }
-function poolMastered(){ return [...known].filter(t=>pool.some(c=>c.t===t)).length; }
+
+/* ---------- grading ---------- */
+function afterAnswer(pass, easy){
+  if(session){ session.answered++; if(pass)session.correct++; session.ms += performance.now()-session.start; }
+  bumpStreak(); schedule(cur.t, pass, !!easy);
+  const c=queue.shift();
+  if(!pass && c) queue.splice(Math.min(queue.length,4),0,c);
+  updateStats(); nextCard();
+}
+function rate(gotIt){ if(!flipped) return; afterAnswer(gotIt, false); }
+
+function submitType(){
+  const inp=$("qinput");
+  if(answered){ afterAnswer(lastPass, false); return; }
+  const ok=matches(inp.value, cur.t); answered=true; lastPass=ok; inp.disabled=true;
+  const res=$("qresult"); res.classList.remove("hidden");
+  res.innerHTML = (ok?'<span class="ok">Correct.</span> ':'<span class="no">Not quite.</span> ')+
+    '<span class="ans">Answer: '+escapeHtml(cur.t)+'</span>';
+  $("qSubmit").textContent="Next →";
+}
+let lastPass=false;
+function pickChoice(btn, term, c){
+  if(answered) return; answered=true;
+  const ok = term===c.t; lastPass=ok;
+  [...$("qchoices").children].forEach(b=>{ b.disabled=true;
+    if(b.textContent===c.t) b.classList.add("correct");
+    else if(b===btn) b.classList.add("wrong"); });
+  const res=$("qresult"); res.classList.remove("hidden");
+  res.innerHTML = ok?'<span class="ok">Correct.</span>':'<span class="no">Answer: '+escapeHtml(c.t)+'</span>';
+  setTimeout(()=>afterAnswer(ok,false), ok?650:1100);
+}
+
+/* ---------- fuzzy matching (type mode) ---------- */
+function norm(s){ return (s||"").toLowerCase().replace(/\([^)]*\)/g," ").replace(/[^a-z0-9]+/g," ").replace(/\s+/g," ").trim(); }
+function abbrOf(s){ const m=(s||"").match(/\(([^)]+)\)/); return m?m[1].toLowerCase().replace(/[^a-z0-9]/g,""):null; }
+function lev(a,b){ const m=a.length,n=b.length; if(!m)return n; if(!n)return m;
+  const dp=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]); for(let j=0;j<=n;j++)dp[0][j]=j;
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++){ const c=a[i-1]===b[j-1]?0:1;
+    dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+c); } return dp[m][n]; }
+function matches(input, term){
+  const ni=norm(input); if(!ni) return false;
+  const ab=abbrOf(term);
+  if(ab && (input||"").toLowerCase().replace(/[^a-z0-9]/g,"")===ab) return true;
+  const base=term.replace(/\([^)]*\)/g," ");           // drop abbreviations
+  const alts=base.split(/\/|,/).map(norm).filter(Boolean);
+  const full=norm(term); if(!alts.includes(full)) alts.push(full);
+  for(const a of alts){
+    if(ni===a) return true;
+    if(ni.replace(/s$/,"")===a.replace(/s$/,"")) return true;
+    if(lev(ni,a) <= Math.max(1, Math.floor(a.length*0.12))) return true;
+  }
+  return false;
+}
+function escapeHtml(s){ return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ---------- sessions ---------- */
+function newSession(cards){ session={total:cards.length, answered:0, correct:0, ms:0, start:0};
+  queue=shuffle(cards.slice()); nextCard(); }
+function nextCard(){
+  if(!queue.length) return finishSession();
+  const c=queue[0]; session.start=performance.now();
+  if(style==="flip") presentFlip(c);
+  else if(style==="type") presentType(c);
+  else presentChoice(c);
+}
+function startStudy(ahead){
+  pool=computePool(); updateChips();
+  const due = ahead ? pool.slice() : pool.filter(c=>isDue(c.t));
+  if(!due.length){ showNothingDue(); return; }
+  newSession(due); updateStats();
+}
+function showNothingDue(){
+  hideAll(); const s=$("summary"); s.classList.remove("hidden");
+  const mastered=pool.filter(c=>isMastered(c.t)).length;
+  s.innerHTML='<div class="summary"><h2>All caught up</h2>'+
+    '<p>Nothing is due in this set right now.</p>'+
+    '<div class="big">'+mastered+' / '+pool.length+'</div><p>mastered</p>'+
+    '<div class="acts"><button class="primary" id="ahead">Study ahead anyway</button>'+
+    '<button class="ghost2" id="resetS">Reset progress</button></div></div>';
+  $("ahead").onclick=()=>startStudy(true);
+  $("resetS").onclick=doReset; redraw=showNothingDue; updateStats();
+}
+function finishSession(){
+  hideAll(); const s=$("summary"); s.classList.remove("hidden");
+  const acc = session.answered ? Math.round(session.correct/session.answered*100) : 0;
+  const avg = session.answered ? (session.ms/session.answered/1000) : 0;
+  const missed = pool.map(c=>({t:c.t,w:st(c.t).wrong})).filter(x=>x.w>0).sort((a,b)=>b.w-a.w).slice(0,3);
+  const mastered=pool.filter(c=>isMastered(c.t)).length;
+  s.innerHTML='<div class="summary"><h2>Session complete</h2>'+
+    '<div class="sgrid"><div><b>'+acc+'%</b>accuracy</div>'+
+    '<div><b>'+session.total+'</b>cards</div>'+
+    '<div><b>'+avg.toFixed(1)+'s</b>avg / card</div>'+
+    '<div><b>'+meta.streak+'d</b>streak</div></div>'+
+    '<p>'+mastered+' / '+pool.length+' mastered in this set</p>'+
+    (missed.length?'<div class="missed">Most missed: '+missed.map(m=>escapeHtml(m.t)+' ('+m.w+')').join(' · ')+'</div>':'')+
+    '<div class="acts"><button class="primary" id="again">Study ahead</button>'+
+    '<button class="ghost2" id="restartS">Restart due</button>'+
+    '<button class="ghost2" id="resetS">Reset progress</button></div></div>';
+  $("again").onclick=()=>startStudy(true);
+  $("restartS").onclick=()=>startStudy(false);
+  $("resetS").onclick=doReset; redraw=finishSession; updateStats();
+}
+
+/* ---------- browse ---------- */
+function browse(){ pool=computePool(); updateChips();
+  if(!pool.length){ hideAll(); $("empty").classList.remove("hidden"); $("emptyMsg").textContent="No cards match."; updateStats(); return; }
+  bi=(bi+pool.length)%pool.length; presentBrowse(pool[bi]); updateStats(); }
+
+/* ---------- stats + chips + theme ---------- */
 function updateStats(){
-  $("sKnown").textContent = poolMastered();
-  $("sTotal").textContent = pool.length;
-  $("bar").style.width = pool.length ? ((poolMastered()/pool.length)*100)+"%" : "0%";
-  if(mode==="study"){ $("sQueueWrap").classList.remove("hidden"); $("sQueue").textContent=queue.length; }
-  else $("sQueueWrap").classList.add("hidden");
+  const p=computePool();
+  const mastered=p.filter(c=>isMastered(c.t)).length;
+  const due=p.filter(c=>isDue(c.t)).length;
+  $("sDue").textContent=due; $("sKnown").textContent=mastered; $("sTotal").textContent=p.length;
+  $("sStreak").textContent=meta.streak;
+  $("bar").style.width=(p.length?(mastered/p.length*100):0)+"%";
 }
+function updateChips(){
+  const box=$("chips"); box.innerHTML="";
+  const mk=(key,label,n,cls)=>{ const b=document.createElement("button");
+    b.className="chip"+(cls?" "+cls:""); b.setAttribute("aria-pressed", cat===key);
+    b.innerHTML=escapeHtml(label)+(n!=null?' <span class="n">'+n+'</span>':'');
+    b.onclick=()=>{ cat=key; bi=0; refresh(); }; box.appendChild(b); };
+  mk("__all","All",ALL.length);
+  [...catCounts().entries()].sort((a,b)=>b[1]-a[1]).forEach(([c,n])=>mk(c,c,n));
+  const sc=starredCount(); mk("__starred","★ Starred",sc,"star");
+}
+function applyTheme(){ document.documentElement.dataset.theme=meta.theme;
+  $("theme").textContent = meta.theme==="dark" ? "Light" : "Dark"; }
 
-function startSession(cards){
-  struggled = new Set();
-  queue = shuffle(cards.slice());
-  $("summary").classList.add("hidden");
-  $("empty").classList.toggle("hidden", cards.length>0);
-  card.classList.toggle("hidden", cards.length===0);
-  if(cards.length) present(); else updateStats();
-}
-function present(){
-  if(queue.length===0){ return summary(); }
-  card.classList.remove("hidden"); $("summary").classList.add("hidden"); $("empty").classList.add("hidden");
-  setFace(queue[0]);
-  $("rateRow").classList.add("locked");
+/* ---------- orchestration ---------- */
+function refresh(){
+  updateChips();
+  if(mode==="study") startStudy(false);
+  else browse();
   updateStats();
 }
-function rate(gotIt){
-  if(!flipped || queue.length===0) return;
-  const c = queue.shift();
-  if(gotIt){ known.add(c.t); saveKnown(); }
-  else{ struggled.add(c.t); queue.splice(Math.min(queue.length,4),0,c); }
-  present();
+function setMode(m){ mode=m;
+  $("mStudy").setAttribute("aria-pressed",m==="study");
+  $("mBrowse").setAttribute("aria-pressed",m==="browse");
+  $("styleSeg").style.display = m==="study" ? "" : "none";
+  $("styleLabel").style.display = m==="study" ? "" : "none";
+  $("kbd").textContent = m==="study"
+    ? (style==="flip" ? "Space / F flips · 1 = Got it · 2 = Review again" : "Enter to check · then Enter for next")
+    : "← → browse · Space / F flips";
+  refresh();
 }
-function summary(){
-  card.classList.add("hidden"); $("empty").classList.add("hidden");
-  const s=$("summary"); s.classList.remove("hidden");
-  const total=pool.length, tricky=[...struggled];
-  s.innerHTML =
-    '<h2>Session complete</h2>'+
-    '<div class="big">'+poolMastered()+' / '+total+'</div>'+
-    '<p>terms mastered in this set.</p>'+
-    (tricky.length? '<p>'+tricky.length+' term'+(tricky.length>1?'s':'')+' needed a repeat before you got '+(tricky.length>1?'them':'it')+'.</p>':'<p>No repeats needed — clean run.</p>')+
-    '<div class="acts">'+
-      (tricky.length? '<button class="tricky" id="doTricky">Study the '+tricky.length+' tricky one'+(tricky.length>1?'s':'')+'</button>':'')+
-      '<button class="primary" id="doAgain">Study this set again</button>'+
-      '<button class="ghost2" id="doAll">Reset & study all</button>'+
-    '</div>';
-  updateStats();
-  if($("doTricky")) $("doTricky").onclick=()=>startSession(ALL.filter(c=>struggled.has(c.t)));
-  $("doAgain").onclick=()=>startSession(pool);
-  $("doAll").onclick=()=>{ known=new Set(); saveKnown(); startSession(pool); };
+function setStyle(s){ style=s;
+  $("sFlip").setAttribute("aria-pressed",s==="flip");
+  $("sType").setAttribute("aria-pressed",s==="type");
+  $("sChoice").setAttribute("aria-pressed",s==="choice");
+  $("kbd").textContent = s==="flip" ? "Space / F flips · 1 = Got it · 2 = Review again" : "Enter to check · then Enter for next";
+  if(mode==="study") startStudy(false);
+}
+function doReset(){ state={}; saveState(); refresh(); }
+
+/* ---------- print ---------- */
+function buildPrint(){
+  const groups=new Map();
+  computePool().forEach(c=>{ const k=c.c||"Uncategorized"; if(!groups.has(k))groups.set(k,[]); groups.get(k).push(c); });
+  let html='<h2>Engineering Economics — Glossary</h2>';
+  [...groups.entries()].forEach(([g,arr])=>{
+    html+='<div class="pcat">'+escapeHtml(g)+'</div>';
+    arr.forEach(c=>{ html+='<div class="prow"><span class="pt">'+escapeHtml(c.t)+':</span> '+escapeHtml(stripLatex(c.d))+'</div>'; });
+  });
+  $("printSheet").innerHTML=html;
 }
 
-function browseRender(){
-  if(pool.length===0){ card.classList.add("hidden"); $("empty").classList.remove("hidden"); $("counter").textContent="0 / 0"; return; }
-  card.classList.remove("hidden"); $("empty").classList.add("hidden"); $("summary").classList.add("hidden");
-  bi=(bi+pool.length)%pool.length;
-  setFace(pool[bi]);
-  $("counter").textContent=(bi+1)+" / "+pool.length;
-  updateStats();
-}
-
-function applyFilter(q){
-  q=(q||"").trim().toLowerCase();
-  pool = q ? ALL.filter(c=>(c.t+" "+c.d).toLowerCase().includes(q)) : ALL.slice();
-  bi=0;
-  if(mode==="study"){ const todo=pool.filter(c=>!known.has(c.t)); startSession(todo.length?todo:pool); }
-  else browseRender();
-}
-function setMode(m){
-  mode=m;
-  $("mStudy").setAttribute("aria-pressed", m==="study");
-  $("mBrowse").setAttribute("aria-pressed", m==="browse");
-  $("rateRow").classList.toggle("hidden", m!=="study");
-  $("navRow").classList.toggle("hidden", m==="study");
-  $("kbd").textContent = m==="study" ? "Space / F flips · 1 = Got it · 2 = Review again"
-                                     : "← → browse · Space / F flips";
-  if(m==="study"){ const todo=pool.filter(c=>!known.has(c.t)); startSession(todo.length?todo:pool); }
-  else browseRender();
-}
-
+/* ---------- events ---------- */
 card.addEventListener("click", flip);
+$("starF").addEventListener("click", e=>{ e.stopPropagation(); if(!cur)return;
+  const s=st(cur.t); s.starred=!s.starred; saveState(); setStar(); updateChips(); });
 $("btnGot").onclick=()=>rate(true);
 $("btnReview").onclick=()=>rate(false);
 $("mStudy").onclick=()=>setMode("study");
 $("mBrowse").onclick=()=>setMode("browse");
-$("prev").onclick=()=>{bi--;browseRender();};
-$("next").onclick=()=>{bi++;browseRender();};
-$("shuffle").onclick=()=>{ if(mode==="study"){shuffle(queue);present();} else {shuffle(pool);bi=0;browseRender();} };
-$("restart").onclick=()=>{ if(mode==="study"){const todo=pool.filter(c=>!known.has(c.t));startSession(todo.length?todo:pool);} else {bi=0;browseRender();} };
-$("resetprog").onclick=()=>{ known=new Set(); saveKnown(); setMode(mode); };
-$("search").addEventListener("input", e=>applyFilter(e.target.value));
+$("sFlip").onclick=()=>setStyle("flip");
+$("sType").onclick=()=>setStyle("type");
+$("sChoice").onclick=()=>setStyle("choice");
+$("prev").onclick=()=>{bi--;browse();};
+$("next").onclick=()=>{bi++;browse();};
+$("qSubmit").onclick=submitType;
+$("qinput").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); submitType(); } });
+$("shuffle").onclick=()=>{ if(mode==="study"){ shuffle(queue); nextCard(); } else { shuffle(pool); bi=0; presentBrowse(pool[0]); } };
+$("restart").onclick=()=>{ if(mode==="study") startStudy(false); else { bi=0; browse(); } };
+$("reset").onclick=doReset;
+$("theme").onclick=()=>{ meta.theme = meta.theme==="dark"?"light":"dark"; saveMeta(); applyTheme(); };
+$("print").onclick=()=>{ buildPrint(); window.print(); };
+$("search").addEventListener("input", ()=>refresh());
 
 document.addEventListener("keydown", e=>{
   if(e.target.tagName==="INPUT") return;
   const k=e.key.toLowerCase();
-  if(k===" "||k==="f"){flip();e.preventDefault();}
-  else if(mode==="study"){
-    if(k==="1"||k==="j"){rate(true);e.preventDefault();}
-    else if(k==="2"||k==="k"){rate(false);e.preventDefault();}
-  } else {
-    if(e.key==="ArrowRight"){bi++;browseRender();e.preventDefault();}
-    else if(e.key==="ArrowLeft"){bi--;browseRender();e.preventDefault();}
+  if(mode==="study" && style==="flip"){
+    if(k===" "||k==="f"){flip();e.preventDefault();}
+    else if(k==="1"||k==="j"){rate(true);e.preventDefault();}
+    else if(k==="2"||k==="l"){rate(false);e.preventDefault();}
+  } else if(mode==="browse"){
+    if(k===" "||k==="f"){flip();e.preventDefault();}
+    else if(e.key==="ArrowRight"){bi++;browse();e.preventDefault();}
+    else if(e.key==="ArrowLeft"){bi--;browse();e.preventDefault();}
   }
 });
 
-/* Initialize after trying to load the Excel list. */
+/* ---------- xlsx load + init ---------- */
+async function loadFromXlsx(){
+  try{
+    if(typeof XLSX==="undefined") return;
+    const res=await fetch(XLSX_FILE,{cache:"no-store"}); if(!res.ok) return;
+    const wb=XLSX.read(await res.arrayBuffer(),{type:"array"});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:""});
+    const parsed=rows.map(r=>{ const keys=Object.keys(r);
+      const f=n=>{ const k=keys.find(k=>String(k).trim().toLowerCase()===n); return k?String(r[k]).trim():""; };
+      return {t:f("term"), d:f("definition"), c:f("category")}; }).filter(c=>c.t&&c.d);
+    if(parsed.length) ALL=parsed;
+  }catch(e){}
+}
 (async function init(){
+  migrate();
   await loadFromXlsx();
-  pool = ALL.slice();
-  $("sub").textContent = ALL.length + " terms · flip, then rate yourself — missed cards come back until you clear them";
-  setMode("study");
+  applyTheme();
+  $("sub").textContent = ALL.length + " terms · spaced repetition, quizzes, and categories";
+  setStyle("flip"); setMode("study");
 })();
+window.addEventListener("load", ()=>{ if(window.renderMathInElement) redraw(); });
 </script>
 </body>
 </html>
